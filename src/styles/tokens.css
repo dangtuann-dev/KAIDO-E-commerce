@@ -1,0 +1,53 @@
+/**
+ * [SHARED] Design tokens — Blueprint §1.2–§1.4.
+ * Các mã HEX dưới đây được ước lượng từ ảnh PDF, cần thay bằng mã thật từ file
+ * thiết kế gốc (xem docs/DESIGN_SYSTEM.md). Giữ đồng bộ với tailwind.config.js
+ * cho tới khi có nguồn token chính thức.
+ */
+:root {
+  /* Brand */
+  --kaido-primary: #1385b5;
+  --kaido-primary-hover: #0e6d96;
+  --kaido-primary-active: #0a5878;
+  --kaido-accent: #ffe61e;
+  --kaido-accent-hover: #f5d90a;
+  --kaido-accent-active: #e6c800;
+  --kaido-accent-ink: #1f2a37;
+  --kaido-secondary: #f4685b;
+  --kaido-sale: #f0524b;
+  --kaido-success: #22a34a;
+  --kaido-success-strong: #15803d;
+  --kaido-star: #ffc107;
+
+  /* Neutrals */
+  --kaido-ink: #1f2a37;
+  --kaido-slate: #6b7280;
+  --kaido-mist: #9ca3af;
+  --kaido-fog: #e5e7eb;
+  --kaido-white: #ffffff;
+
+  /* Surfaces */
+  --kaido-surface-mint: #e6f4f1;
+  --kaido-surface-blush: #fcebec;
+  --kaido-surface-sky: #e3f3fa;
+
+  /* Radius */
+  --kaido-radius-sm: 12px;
+  --kaido-radius-md: 16px;
+  --kaido-radius-lg: 20px;
+  --kaido-radius-xl: 24px;
+
+  /* Layout */
+  --kaido-container: 1200px;
+  --kaido-gutter: 16px;
+  --kaido-gutter-md: 24px;
+  --kaido-topbar-height: 36px;
+  --kaido-header-height: 72px;
+
+  /* Elevation */
+  --kaido-shadow-card: 0 1px 2px rgba(31, 42, 55, 0.06), 0 8px 24px rgba(31, 42, 55, 0.06);
+  --kaido-shadow-lift: 0 12px 32px rgba(31, 42, 55, 0.12);
+
+  /* Motion */
+  --kaido-transition: 250ms;
+}

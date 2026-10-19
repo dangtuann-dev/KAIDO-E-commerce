@@ -168,7 +168,8 @@ const endpoints = [
     roles: ['ADMIN', 'STAFF'],
     operation: 'createProduct',
     summary: 'Tạo sản phẩm mới, SKU duy nhất toàn hệ thống (BR-M02-01).',
-    input: '{ name, sku, price_regular, price_sale, category_id, brand_id, age_group, images, variants }',
+    input:
+      '{ name, sku, price_regular, price_sale, category_id, brand_id, age_group, images, variants }',
     output: '{ product_id, sku, status }',
     status: 'NOT_IMPLEMENTED',
   },
@@ -288,9 +289,11 @@ const endpoints = [
     access: 'optional',
     roles: [],
     operation: 'getCart',
-    summary: 'Giỏ của khách (X-Guest-Session-Id) hoặc thành viên; kiểm tra tồn/giá (BR-M04-02, F09).',
+    summary:
+      'Giỏ của khách (X-Guest-Session-Id) hoặc thành viên; kiểm tra tồn/giá (BR-M04-02, F09).',
     input: 'Header Authorization (tùy chọn) hoặc X-Guest-Session-Id',
-    output: '{ cart_id, items: [...], total_items, selected_subtotal, total_discount, estimated_total }',
+    output:
+      '{ cart_id, items: [...], total_items, selected_subtotal, total_discount, estimated_total }',
     status: 'NOT_IMPLEMENTED',
   },
   {
@@ -373,8 +376,7 @@ const endpoints = [
     roles: [],
     rateLimit: 'voucher',
     operation: 'applyCouponToCart',
-    summary:
-      'Áp voucher cấp giỏ; dùng chung CouponService của M09 (M04-F07, OPEN_DECISIONS #9).',
+    summary: 'Áp voucher cấp giỏ; dùng chung CouponService của M09 (M04-F07, OPEN_DECISIONS #9).',
     input: '{ coupon_code }',
     output: '{ discount_amount, new_total, message }',
     status: 'NOT_IMPLEMENTED',
@@ -404,8 +406,7 @@ const endpoints = [
     access: 'auth',
     roles: [],
     operation: 'placeOrder',
-    summary:
-      'Tạo đơn + giữ tồn kho nguyên tử bằng RPC reserve_stock (BR-M05-01, NFR-M05-01).',
+    summary: 'Tạo đơn + giữ tồn kho nguyên tử bằng RPC reserve_stock (BR-M05-01, NFR-M05-01).',
     input: '{ shipping_address, payment_method, shipping_method, note, items }',
     output: '{ order_id, order_code, payment_url, status }',
     status: 'NOT_IMPLEMENTED',
@@ -448,8 +449,7 @@ const endpoints = [
     access: 'auth',
     roles: [],
     operation: 'cancelOrder',
-    summary:
-      'Khách hủy khi đơn PENDING/CONFIRMED; giải phóng tồn kho (BR-M05-04, BR-M06-02).',
+    summary: 'Khách hủy khi đơn PENDING/CONFIRMED; giải phóng tồn kho (BR-M05-04, BR-M06-02).',
     input: '{ reason }',
     output: "{ success: true, new_status: 'CANCELLED' }",
     status: 'NOT_IMPLEMENTED',
@@ -494,8 +494,7 @@ const endpoints = [
     access: 'optional',
     roles: [],
     operation: 'calculateShippingFee',
-    summary:
-      'Phí theo khu vực/khối lượng/gói giao; đơn >= 500.000đ miễn phí (M06-F08).',
+    summary: 'Phí theo khu vực/khối lượng/gói giao; đơn >= 500.000đ miễn phí (M06-F08).',
     input: '{ address, weight, total_amount }',
     output: '{ shipping_fee, estimated_delivery_days, carrier_options }',
     status: 'NOT_IMPLEMENTED',
@@ -538,8 +537,7 @@ const endpoints = [
     access: 'public',
     roles: [],
     operation: 'handleCarrierWebhook',
-    summary:
-      'Webhook ĐVVC bảo vệ bằng HMAC; cập nhật SHIPPING/DELIVERED/FAILED (M06-F10).',
+    summary: 'Webhook ĐVVC bảo vệ bằng HMAC; cập nhật SHIPPING/DELIVERED/FAILED (M06-F10).',
     input: 'Raw body + chữ ký HMAC',
     output: '{ success: true, processed: true }',
     status: 'NOT_IMPLEMENTED',
@@ -569,8 +567,7 @@ const endpoints = [
     access: 'auth',
     roles: [],
     operation: 'createReturnRequest',
-    summary:
-      'Đổi trả trong 7 ngày từ lúc nhận, tối thiểu 1 ảnh, đơn đã COMPLETED (BR-M06-05).',
+    summary: 'Đổi trả trong 7 ngày từ lúc nhận, tối thiểu 1 ảnh, đơn đã COMPLETED (BR-M06-05).',
     input: '{ item_ids, reason, images, note }',
     output: "{ return_request_id, status: 'PENDING_APPROVAL' }",
     status: 'NOT_IMPLEMENTED',
@@ -703,8 +700,7 @@ const endpoints = [
     roles: ['ADMIN', 'STAFF', 'WAREHOUSE_KEEPER'],
     internal: true,
     operation: 'reserveStock',
-    summary:
-      'Nội bộ: gọi RPC reserve_stock(order_ref, items) trong một giao dịch (M08-F05).',
+    summary: 'Nội bộ: gọi RPC reserve_stock(order_ref, items) trong một giao dịch (M08-F05).',
     input: '{ order_ref, items: [{ sku, quantity }] }',
     output: '{ success: true, reservation_id, expires_at }',
     status: 'NOT_IMPLEMENTED',
@@ -762,8 +758,7 @@ const endpoints = [
     access: 'role',
     roles: ['ADMIN', 'WAREHOUSE_KEEPER'],
     operation: 'createStockAdjustment',
-    summary:
-      'Lệch > 5.000.000đ hoặc > 10 sản phẩm cần Admin duyệt (M08-F09).',
+    summary: 'Lệch > 5.000.000đ hoặc > 10 sản phẩm cần Admin duyệt (M08-F09).',
     input: '{ warehouse_id, items: [{ sku, diff_quantity, reason }] }',
     output: "{ adjustment_id, status: 'PENDING_APPROVAL' | 'APPROVED' }",
     status: 'NOT_IMPLEMENTED',
@@ -822,8 +817,7 @@ const endpoints = [
     roles: [],
     rateLimit: 'voucher',
     operation: 'verifyCoupon',
-    summary:
-      'Kiểm tra coupon cho M04/M05, dùng chung CouponService (M09-F08, NFR-M09-02).',
+    summary: 'Kiểm tra coupon cho M04/M05, dùng chung CouponService (M09-F08, NFR-M09-02).',
     input: '{ code, order_amount, customer_id, items }',
     output: '{ is_valid, discount_amount, message }',
     status: 'NOT_IMPLEMENTED',

@@ -1,10 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: [
-    './src/app/**/*.{js,jsx}',
-    './src/modules/**/*.{js,jsx}',
-    './src/shared/**/*.{js,jsx}',
-  ],
+  content: ['./src/app/**/*.{js,jsx}', './src/modules/**/*.{js,jsx}', './src/shared/**/*.{js,jsx}'],
   theme: {
     container: {
       center: true,
@@ -58,7 +54,15 @@ export default {
         },
       },
       fontFamily: {
-        heading: ['var(--font-fredoka)', 'Fredoka', 'system-ui', 'sans-serif'],
+        // Fredoka thiếu subset tiếng Việt — Nunito đứng sau để phủ dấu.
+        heading: [
+          'var(--font-fredoka)',
+          'Fredoka',
+          'var(--font-nunito)',
+          'Nunito',
+          'system-ui',
+          'sans-serif',
+        ],
         body: ['var(--font-nunito)', 'Nunito', 'system-ui', 'sans-serif'],
       },
       fontSize: {
