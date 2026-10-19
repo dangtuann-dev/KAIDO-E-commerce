@@ -1,0 +1,22 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "regions": ["sin1"],
+  "crons": [
+    {
+      "path": "/api/cron/campaigns",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/expire-loyalty-points",
+      "schedule": "0 1 * * *"
+    },
+    {
+      "path": "/api/cron/close-support-tickets",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/low-stock-scan",
+      "schedule": "0 3 * * *"
+    }
+  ]
+}
