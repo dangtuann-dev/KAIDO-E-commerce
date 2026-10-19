@@ -1,3 +1,4 @@
+export * from './auth.js';
 export * from './roles.js';
 export * from './order-status.js';
 export * from './payment.js';
