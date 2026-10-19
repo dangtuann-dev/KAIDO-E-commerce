@@ -41,3 +41,6 @@ yarn-error.log*
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# tài liệu nội bộ — giữ trên máy, không theo dõi bằng Git
+docs/
