@@ -1,16 +1,16 @@
-import { Fredoka, Nunito } from 'next/font/google';
+import { Baloo_2, Nunito } from 'next/font/google';
 import Providers from '@/app/providers.js';
 import '@/styles/tokens.css';
 import '@/app/globals.css';
 
 /**
  * [APP] Root layout — ngôn ngữ tiếng Việt, font Blueprint §1.3.
- * Fredoka không có subset Vietnamese; các ký tự có dấu sẽ fallback sang Nunito
- * (đã khai báo trong tailwind.config.js). Ghi chú tại docs/DESIGN_SYSTEM.md.
+ * Baloo 2 giữ phong cách bo tròn của Fredoka và có đầy đủ subset Vietnamese,
+ * tránh việc dấu tiếng Việt phải fallback sang font khác.
  */
-const fredoka = Fredoka({
-  subsets: ['latin', 'latin-ext'],
-  variable: '--font-fredoka',
+const baloo = Baloo_2({
+  subsets: ['latin', 'vietnamese'],
+  variable: '--font-baloo',
   display: 'swap',
 });
 
@@ -67,7 +67,7 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="vi" className={`${fredoka.variable} ${nunito.variable}`}>
+    <html lang="vi" className={`${baloo.variable} ${nunito.variable}`}>
       <body className="min-h-screen bg-white font-body text-ink antialiased">
         <a href="#main-content" className="kaido-skip-link">
           Bỏ qua điều hướng, đến nội dung chính

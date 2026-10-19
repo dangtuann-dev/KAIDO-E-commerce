@@ -73,7 +73,7 @@ Nguồn: SRS §2.2 và `src/shared/rbac/permissions.js`. Role `MARKETING` đư�
 - **Một app Next.js 16.4.2** (App Router, React 19.3.1, JavaScript + JSDoc): UI và API cùng repo, deploy Vercel region `sin1`.
 - **Supabase**: PostgreSQL 15+ cho dữ liệu, Storage cho ảnh/tệp. Trình duyệt **không** gọi Supabase trực tiếp; server dùng service role key.
 - **Xác thực tự quản**: JWT HS256 qua `jose` (access 15 phút, giữ trong bộ nhớ), refresh token 7 ngày trong cookie HttpOnly; mật khẩu `bcryptjs`.
-- **Giao diện**: Tailwind CSS 3.4.19 với design tokens KAIDO, Fredoka/Nunito, TanStack Query 5, Zustand 5, React Hook Form 7 + Zod 3.
+- **Giao diện**: Tailwind CSS 3.4.19 với design tokens KAIDO, Baloo 2/Nunito, TanStack Query 5, Zustand 5, React Hook Form 7 + Zod 3.
 - **Chất lượng**: Vitest 5, ESLint 9 (flat config + rule ranh giới module), Prettier 3, GitHub Actions CI.
 
 ```mermaid

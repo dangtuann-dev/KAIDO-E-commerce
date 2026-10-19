@@ -54,10 +54,10 @@ const config = {
         },
       },
       fontFamily: {
-        // Fredoka thiếu subset tiếng Việt — Nunito đứng sau để phủ dấu.
+        // Baloo 2 phủ đầy đủ dấu tiếng Việt; Nunito là dự phòng khi font chưa tải.
         heading: [
-          'var(--font-fredoka)',
-          'Fredoka',
+          'var(--font-baloo)',
+          '"Baloo 2"',
           'var(--font-nunito)',
           'Nunito',
           'system-ui',
