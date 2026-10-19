@@ -112,3 +112,13 @@ m06-fulfillment/
 - Ghi dữ liệu nguyên tử bằng RPC PL/pgSQL khi có giao dịch nhiều bảng.
 - Không đặt secret trong module; đọc qua `src/server/env.js`.
 - TODO còn lại phải giữ mã SRS để truy vết.
+
+## 11. Client và render
+
+- **Server Component (SEO/ISR):** Không có trang public SEO; chi tiết đơn của khách cần đăng nhập.
+- **Client Component:** /account/orders/**, /admin/shipping.
+- **Component dùng toàn site:** Không có component toàn site.
+- `public.client.js` là cửa ngõ import chéo duy nhất phía client.
+- `client/components/`: mỗi component trong bảng UI Components ở mục 8 là một file khung; các component toàn site đã có bản tối giản dùng được.
+- `client/hooks/`: một hook TanStack Query cho mỗi API-Mxx-yy; `client/services/`: một hàm cho mỗi API, đọc path từ `src/shared/api-endpoints.js`.
+- `client/pages/`: khung `ModuleStub`; khi triển khai phải giữ đúng chế độ render ở trên.

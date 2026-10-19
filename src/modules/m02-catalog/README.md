@@ -113,3 +113,13 @@ m02-catalog/
 - Ghi dữ liệu nguyên tử bằng RPC PL/pgSQL khi có giao dịch nhiều bảng.
 - Không đặt secret trong module; đọc qua `src/server/env.js`.
 - TODO còn lại phải giữ mã SRS để truy vết.
+
+## 11. Client và render
+
+- **Server Component (SEO/ISR):** /products (M02-F10), /products/[slug] (M02-F11) — SEO/ISR; các shelf trên trang chủ.
+- **Client Component:** /admin/products, /admin/products/create; bộ lọc client trên PLP.
+- **Component dùng toàn site:** MegaMenuCategory (Header toàn site).
+- `public.client.js` là cửa ngõ import chéo duy nhất phía client.
+- `client/components/`: mỗi component trong bảng UI Components ở mục 8 là một file khung; các component toàn site đã có bản tối giản dùng được.
+- `client/hooks/`: một hook TanStack Query cho mỗi API-Mxx-yy; `client/services/`: một hàm cho mỗi API, đọc path từ `src/shared/api-endpoints.js`.
+- `client/pages/`: khung `ModuleStub`; khi triển khai phải giữ đúng chế độ render ở trên.

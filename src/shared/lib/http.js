@@ -95,6 +95,21 @@ function buildUrl(path, query) {
   return serialized ? `${normalizedPath}?${serialized}` : normalizedPath;
 }
 
+/**
+ * Thay tham số động `[orderRef]`, `[idOrSlug]`... bằng giá trị đã mã hóa.
+ * @param {string} path
+ * @param {Record<string, string | number>} [params]
+ */
+export function resolveEndpointPath(path, params = {}) {
+  return path.replace(/\[([^\]]+)\]/g, (match, key) => {
+    const value = params[key];
+    if (value === undefined || value === null || value === '') {
+      throw new Error(`Thiếu tham số đường dẫn "${key}" cho ${path}.`);
+    }
+    return encodeURIComponent(String(value));
+  });
+}
+
 async function refreshAccessToken() {
   if (!refreshPromise) {
     refreshPromise = (async () => {
