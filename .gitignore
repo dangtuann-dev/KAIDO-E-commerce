@@ -44,3 +44,4 @@ yarn-error.log*
 
 # tài liệu nội bộ — giữ trên máy, không theo dõi bằng Git
 docs/
+/*.docx
