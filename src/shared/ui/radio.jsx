@@ -20,6 +20,8 @@ const Radio = forwardRef(function Radio(
   return (
     <div className={cn('flex flex-col gap-1', containerClassName)}>
       <div className="flex min-h-[44px] items-start gap-2.5">
+        {/* ARIA cho phép aria-invalid trên form control; rule jsx-a11y chưa cập nhật cho role radio. */}
+        {/* eslint-disable-next-line jsx-a11y/role-supports-aria-props */}
         <input
           ref={ref}
           id={inputId}

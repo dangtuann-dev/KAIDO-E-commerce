@@ -8,7 +8,11 @@ const SERVER_CONTEXT = [
   /\/scripts\//,
 ];
 
-const CLIENT_CONTEXT = [/\/src\/modules\/[^/]+\/client\//, /\/src\/modules\/[^/]+\/public\.client\.js$/, /\/src\/shared\//];
+const CLIENT_CONTEXT = [
+  /\/src\/modules\/[^/]+\/client\//,
+  /\/src\/modules\/[^/]+\/public\.client\.js$/,
+  /\/src\/shared\//,
+];
 
 function normalize(filename) {
   return filename.split(path.sep).join('/');
@@ -39,7 +43,7 @@ function moduleOf(filename) {
   return match ? match[1] : null;
 }
 
-export default {
+const plugin = {
   rules: {
     'no-client-server-imports': {
       meta: {
@@ -84,7 +88,9 @@ export default {
     'no-deep-cross-module-imports': {
       meta: {
         type: 'problem',
-        docs: { description: 'Module chỉ được import module khác qua public.server.js / public.client.js' },
+        docs: {
+          description: 'Module chỉ được import module khác qua public.server.js / public.client.js',
+        },
         schema: [],
         messages: {
           deepImport:
@@ -112,7 +118,8 @@ export default {
           }
           if (!isPublicServer && !isPublicClient) {
             const targetFile = normalize(resolved);
-            const deep = /\/(server|client)\//.test(targetFile) || targetFile.endsWith('/public.server.js');
+            const deep =
+              /\/(server|client)\//.test(targetFile) || targetFile.endsWith('/public.server.js');
             if (deep && targetModule !== currentModule) {
               context.report({ node, messageId: 'deepImport', data: { source } });
             }
@@ -134,3 +141,5 @@ export default {
     },
   },
 };
+
+export default plugin;

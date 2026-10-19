@@ -1,7 +1,7 @@
 import nextVitals from 'eslint-config-next/core-web-vitals';
 import kaido from './eslint-rules/index.js';
 
-export default [
+const config = [
   {
     ignores: [
       '.next/**',
@@ -40,3 +40,5 @@ export default [
     },
   },
 ];
+
+export default config;

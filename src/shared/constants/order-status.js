@@ -69,7 +69,7 @@ export const ORDER_HISTORY_CHANGE_SOURCES = Object.freeze({
   SYSTEM: 'SYSTEM',
   CUSTOMER: 'CUSTOMER',
   STAFF: 'STAFF',
-  WEBHOOK: 'WEBHOOK',
+  CARRIER: 'CARRIER',
 });
 
 export function canTransitionOrder(fromStatus, toStatus) {
