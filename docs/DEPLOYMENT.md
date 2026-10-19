@@ -4,15 +4,15 @@ Hướng dẫn triển khai ứng dụng Next.js lên Vercel và cấu hình Sup
 
 ## 1. Kiến trúc triển khai
 
-| Thành phần | Nơi chạy | Ghi chú |
-| --- | --- | --- |
+| Thành phần                   | Nơi chạy                        | Ghi chú                               |
+| ---------------------------- | ------------------------------- | ------------------------------------- |
 | Storefront + Admin (SSR/RSC) | Vercel Functions, region `sin1` | `vercel.json` đặt `regions: ["sin1"]` |
-| API Route Handlers `/api/v1` | Vercel Functions, Node runtime | `runtime = 'nodejs'` cho health/cron |
-| PostgreSQL + PL/pgSQL | Supabase, region Singapore | Chọn cùng khu vực để giảm độ trễ |
-| Storage ảnh/tệp | Supabase Storage | Upload qua signed URL |
-| Job mỗi phút | `pg_cron` trong Supabase | Không phụ thuộc gói Vercel |
-| Job hằng ngày | Vercel Cron → `/api/cron/*` | Bảo vệ bằng `CRON_SECRET` |
-| Thanh toán/ĐVVC | Webhook HTTPS → API | IPN, HMAC, idempotency |
+| API Route Handlers `/api/v1` | Vercel Functions, Node runtime  | `runtime = 'nodejs'` cho health/cron  |
+| PostgreSQL + PL/pgSQL        | Supabase, region Singapore      | Chọn cùng khu vực để giảm độ trễ      |
+| Storage ảnh/tệp              | Supabase Storage                | Upload qua signed URL                 |
+| Job mỗi phút                 | `pg_cron` trong Supabase        | Không phụ thuộc gói Vercel            |
+| Job hằng ngày                | Vercel Cron → `/api/cron/*`     | Bảo vệ bằng `CRON_SECRET`             |
+| Thanh toán/ĐVVC              | Webhook HTTPS → API             | IPN, HMAC, idempotency                |
 
 Không có worker thường trực, không có Redis bắt buộc. Ứng dụng stateless: không ghi file vào filesystem của function.
 
@@ -56,11 +56,11 @@ Build **không cần** bí mật thật: route khung không kết nối DB lúc 
 
 ## 4. Môi trường
 
-| Môi trường | Mục đích | Supabase | Ghi chú |
-| --- | --- | --- | --- |
-| Development | `npm run dev` trên máy | Project dev riêng | Dùng `.env.local`, không commit |
-| Preview | Mỗi PR/branch | Project dev/staging | Có thể dùng chung staging; cẩn thận dữ liệu |
-| Production | Domain chính | Project production | Bật backup, cron, webhook thật |
+| Môi trường  | Mục đích               | Supabase            | Ghi chú                                     |
+| ----------- | ---------------------- | ------------------- | ------------------------------------------- |
+| Development | `npm run dev` trên máy | Project dev riêng   | Dùng `.env.local`, không commit             |
+| Preview     | Mỗi PR/branch          | Project dev/staging | Có thể dùng chung staging; cẩn thận dữ liệu |
+| Production  | Domain chính           | Project production  | Bật backup, cron, webhook thật              |
 
 Khuyến nghị tách project Supabase cho production và staging. Preview **không** chạy Vercel Cron (Vercel chỉ chạy cron trên production deployment).
 
@@ -68,24 +68,24 @@ Khuyến nghị tách project Supabase cho production và staging. Preview **kh�
 
 Mẫu đầy đủ: [`.env.example`](../.env.example). Không commit `.env.local`; không đặt bí mật sau tiền tố `NEXT_PUBLIC_`.
 
-| Biến | Bắt buộc | Production | Preview | Development | Ghi chú |
-| --- | --- | --- | --- | --- | --- |
-| `NEXT_PUBLIC_SITE_URL` | Nên có | `https://kaido.vn` | URL preview | `http://localhost:3000` | URL công khai, dùng cho canonical/webhook return |
-| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Không | — | — | — | TODO tích hợp Google; đây là ID công khai, không phải secret |
-| `SUPABASE_URL` | Có | URL production | URL staging | URL dev | Server-only |
-| `SUPABASE_SERVICE_ROLE_KEY` | Có | Key production | Key staging | Key dev | **Bí mật**, không lộ client |
-| `SUPABASE_STORAGE_BUCKET` | Có | `kaido-media` | `kaido-media` | `kaido-media` | Tên bucket |
-| `JWT_ACCESS_SECRET` | Có | Chuỗi ngẫu nhiên ≥ 32 bytes | Khác production | Khác production | Bí mật; đổi sẽ vô hiệu access token cũ |
-| `JWT_REFRESH_SECRET` | Có | Chuỗi ngẫu nhiên ≥ 32 bytes | Khác production | Khác production | Bí mật; cookie refresh |
-| `JWT_ACCESS_TTL` | Không | `900` | `900` | `900` | Giây, mặc định 15 phút |
-| `JWT_REFRESH_TTL` | Không | `604800` | `604800` | `604800` | Giây, mặc định 7 ngày |
-| `BCRYPT_ROUNDS` | Không | `12` | `12` | `12` | Tối thiểu 10 |
-| `CRON_SECRET` | Có | Chuỗi ngẫu nhiên mạnh | Có thể bỏ | Có thể bỏ | Vercel gửi `Authorization: Bearer <CRON_SECRET>` |
-| `VNPAY_TMN_CODE`, `VNPAY_HASH_SECRET`, `VNPAY_URL`, `VNPAY_RETURN_URL`, `VNPAY_IPN_URL` | Khi dùng VNPAY | Sandbox → production | Sandbox | Sandbox | Bí mật hash secret |
-| `MOMO_*`, `ZALOPAY_*` | Khi dùng | — | — | — | Interface đã có, tích hợp thật là TODO |
-| `GHN_*`, `GHTK_*`, `VIETTELPOST_*`, `CARRIER_WEBHOOK_SECRET` | Khi dùng ĐVVC | Thật | Sandbox | Sandbox | Webhook HMAC |
-| `SMTP_*` | Khi gửi email | Thật | Có thể bỏ | Mailhog/console | Interface email là stub |
-| `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Khuyến nghị | Có | Có | Có thể bỏ | Rate limit nhiều instance |
+| Biến                                                                                    | Bắt buộc       | Production                  | Preview         | Development             | Ghi chú                                                      |
+| --------------------------------------------------------------------------------------- | -------------- | --------------------------- | --------------- | ----------------------- | ------------------------------------------------------------ |
+| `NEXT_PUBLIC_SITE_URL`                                                                  | Nên có         | `https://kaido.vn`          | URL preview     | `http://localhost:3000` | URL công khai, dùng cho canonical/webhook return             |
+| `NEXT_PUBLIC_GOOGLE_CLIENT_ID`                                                          | Không          | —                           | —               | —                       | TODO tích hợp Google; đây là ID công khai, không phải secret |
+| `SUPABASE_URL`                                                                          | Có             | URL production              | URL staging     | URL dev                 | Server-only                                                  |
+| `SUPABASE_SERVICE_ROLE_KEY`                                                             | Có             | Key production              | Key staging     | Key dev                 | **Bí mật**, không lộ client                                  |
+| `SUPABASE_STORAGE_BUCKET`                                                               | Có             | `kaido-media`               | `kaido-media`   | `kaido-media`           | Tên bucket                                                   |
+| `JWT_ACCESS_SECRET`                                                                     | Có             | Chuỗi ngẫu nhiên ≥ 32 bytes | Khác production | Khác production         | Bí mật; đổi sẽ vô hiệu access token cũ                       |
+| `JWT_REFRESH_SECRET`                                                                    | Có             | Chuỗi ngẫu nhiên ≥ 32 bytes | Khác production | Khác production         | Bí mật; cookie refresh                                       |
+| `JWT_ACCESS_TTL`                                                                        | Không          | `900`                       | `900`           | `900`                   | Giây, mặc định 15 phút                                       |
+| `JWT_REFRESH_TTL`                                                                       | Không          | `604800`                    | `604800`        | `604800`                | Giây, mặc định 7 ngày                                        |
+| `BCRYPT_ROUNDS`                                                                         | Không          | `12`                        | `12`            | `12`                    | Tối thiểu 10                                                 |
+| `CRON_SECRET`                                                                           | Có             | Chuỗi ngẫu nhiên mạnh       | Có thể bỏ       | Có thể bỏ               | Vercel gửi `Authorization: Bearer <CRON_SECRET>`             |
+| `VNPAY_TMN_CODE`, `VNPAY_HASH_SECRET`, `VNPAY_URL`, `VNPAY_RETURN_URL`, `VNPAY_IPN_URL` | Khi dùng VNPAY | Sandbox → production        | Sandbox         | Sandbox                 | Bí mật hash secret                                           |
+| `MOMO_*`, `ZALOPAY_*`                                                                   | Khi dùng       | —                           | —               | —                       | Interface đã có, tích hợp thật là TODO                       |
+| `GHN_*`, `GHTK_*`, `VIETTELPOST_*`, `CARRIER_WEBHOOK_SECRET`                            | Khi dùng ĐVVC  | Thật                        | Sandbox         | Sandbox                 | Webhook HMAC                                                 |
+| `SMTP_*`                                                                                | Khi gửi email  | Thật                        | Có thể bỏ       | Mailhog/console         | Interface email là stub                                      |
+| `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`                                    | Khuyến nghị    | Có                          | Có              | Có thể bỏ               | Rate limit nhiều instance                                    |
 
 Quy tắc:
 
@@ -97,13 +97,13 @@ Quy tắc:
 
 Cấu hình trong dashboard của đối tác; URL phải là HTTPS công khai, không dùng preview có bảo vệ SSO.
 
-| Dịch vụ | URL | Bảo vệ |
-| --- | --- | --- |
-| VNPAY IPN | `https://<domain>/api/v1/payments/vnpay/ipn` | HMAC-SHA512 + idempotency |
-| VNPAY return | `https://<domain>/order-success/<code>` | Chỉ hiển thị, xác thực trạng thái server-side |
-| MoMo / ZaloPay | TODO — thêm route tương ứng khi tích hợp | Chữ ký theo tài liệu đối tác |
-| ĐVVC | `https://<domain>/api/v1/shipping/webhook/carrier` | `CARRIER_WEBHOOK_SECRET` + HMAC |
-| Vercel Cron | `/api/cron/*` | `Authorization: Bearer <CRON_SECRET>` |
+| Dịch vụ        | URL                                                | Bảo vệ                                        |
+| -------------- | -------------------------------------------------- | --------------------------------------------- |
+| VNPAY IPN      | `https://<domain>/api/v1/payments/vnpay/ipn`       | HMAC-SHA512 + idempotency                     |
+| VNPAY return   | `https://<domain>/order-success/<code>`            | Chỉ hiển thị, xác thực trạng thái server-side |
+| MoMo / ZaloPay | TODO — thêm route tương ứng khi tích hợp           | Chữ ký theo tài liệu đối tác                  |
+| ĐVVC           | `https://<domain>/api/v1/shipping/webhook/carrier` | `CARRIER_WEBHOOK_SECRET` + HMAC               |
+| Vercel Cron    | `/api/cron/*`                                      | `Authorization: Bearer <CRON_SECRET>`         |
 
 - IPN phải **idempotent** (xử lý lại cùng giao dịch không tạo bản ghi trùng); dùng `payment_transactions.idempotency_key` và unique provider transaction.
 - Không tin dữ liệu client trả về từ cổng thanh toán; luôn xác thực chữ ký và trạng thái ở server.
@@ -115,12 +115,12 @@ Cấu hình trong dashboard của đối tác; URL phải là HTTPS công khai, 
 
 `vercel.json` khai báo 4 job hằng ngày (giờ UTC):
 
-| Route | Lịch | Ghi chú |
-| --- | --- | --- |
-| `/api/cron/campaigns` | `0 0 * * *` | M09 |
-| `/api/cron/expire-loyalty-points` | `0 1 * * *` | M07 |
-| `/api/cron/close-support-tickets` | `0 2 * * *` | M10 |
-| `/api/cron/low-stock-scan` | `0 3 * * *` | M08 |
+| Route                             | Lịch        | Ghi chú |
+| --------------------------------- | ----------- | ------- |
+| `/api/cron/campaigns`             | `0 0 * * *` | M09     |
+| `/api/cron/expire-loyalty-points` | `0 1 * * *` | M07     |
+| `/api/cron/close-support-tickets` | `0 2 * * *` | M10     |
+| `/api/cron/low-stock-scan`        | `0 3 * * *` | M08     |
 
 Giới hạn Vercel (tham khảo 2026-10):
 

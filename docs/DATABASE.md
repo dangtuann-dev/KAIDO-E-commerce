@@ -9,20 +9,20 @@ Cơ sở dữ liệu là **PostgreSQL 15+ trên Supabase**. [`database/schema.sq
 
 ## 1. Phân nhóm bảng
 
-| Nhóm | Bảng | Số bảng |
-| --- | --- | ---: |
-| Hệ thống | `system_settings`, `audit_logs`, `notifications` | 3 |
-| M01 — Tài khoản | `users`, `addresses`, `refresh_tokens`, `password_reset_otps` | 4 |
-| M02 — Catalog | `categories`, `brands`, `products`, `product_categories`, `product_variants`, `product_images` | 6 |
-| M03 — Tìm kiếm | `search_history` | 1 |
-| M04 — Giỏ hàng | `carts`, `cart_items`, `cart_saved_items` | 3 |
-| M05 — Đặt hàng | `orders`, `order_items`, `payment_transactions`, `order_status_history` | 4 |
-| M06 — Giao vận | `shipments`, `shipment_events`, `shipping_fee_rules`, `return_requests`, `return_request_items` | 5 |
-| M07 — Loyalty | `coupons`, `coupon_usages`, `membership_tiers`, `loyalty_accounts`, `loyalty_point_transactions`, `customer_vouchers` | 6 |
-| M08 — Kho | `warehouses`, `suppliers`, `inventory_stocks`, `stock_reservations`, `goods_receipts`, `goods_receipt_items`, `stock_adjustments`, `stock_adjustment_items`, `stock_transfers`, `stock_transfer_items`, `stock_movement_logs` | 11 |
-| M09 — Nội dung | `banners`, `article_categories`, `articles`, `campaigns`, `campaign_items` | 5 |
-| M10 — Hỗ trợ | `reviews`, `review_media`, `faq_categories`, `faqs`, `support_tickets`, `ticket_messages`, `ticket_attachments` | 7 |
-| **Tổng** | | **55** |
+| Nhóm            | Bảng                                                                                                                                                                                                                          | Số bảng |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------: |
+| Hệ thống        | `system_settings`, `audit_logs`, `notifications`                                                                                                                                                                              |       3 |
+| M01 — Tài khoản | `users`, `addresses`, `refresh_tokens`, `password_reset_otps`                                                                                                                                                                 |       4 |
+| M02 — Catalog   | `categories`, `brands`, `products`, `product_categories`, `product_variants`, `product_images`                                                                                                                                |       6 |
+| M03 — Tìm kiếm  | `search_history`                                                                                                                                                                                                              |       1 |
+| M04 — Giỏ hàng  | `carts`, `cart_items`, `cart_saved_items`                                                                                                                                                                                     |       3 |
+| M05 — Đặt hàng  | `orders`, `order_items`, `payment_transactions`, `order_status_history`                                                                                                                                                       |       4 |
+| M06 — Giao vận  | `shipments`, `shipment_events`, `shipping_fee_rules`, `return_requests`, `return_request_items`                                                                                                                               |       5 |
+| M07 — Loyalty   | `coupons`, `coupon_usages`, `membership_tiers`, `loyalty_accounts`, `loyalty_point_transactions`, `customer_vouchers`                                                                                                         |       6 |
+| M08 — Kho       | `warehouses`, `suppliers`, `inventory_stocks`, `stock_reservations`, `goods_receipts`, `goods_receipt_items`, `stock_adjustments`, `stock_adjustment_items`, `stock_transfers`, `stock_transfer_items`, `stock_movement_logs` |      11 |
+| M09 — Nội dung  | `banners`, `article_categories`, `articles`, `campaigns`, `campaign_items`                                                                                                                                                    |       5 |
+| M10 — Hỗ trợ    | `reviews`, `review_media`, `faq_categories`, `faqs`, `support_tickets`, `ticket_messages`, `ticket_attachments`                                                                                                               |       7 |
+| **Tổng**        |                                                                                                                                                                                                                               |  **55** |
 
 `coupons` nằm trong block M07 nhưng **M09 sở hữu CouponService** dùng chung cho M04/M05/M07 (xem [OPEN_DECISIONS #9](OPEN_DECISIONS.md#9-voucher-trùng-m07m09)).
 
@@ -154,13 +154,13 @@ Trạng thái đơn dùng **một enum thống nhất** M05 + M06 (OPEN_DECISION
 
 Supabase JS đi qua PostgREST, không hỗ trợ transaction nhiều câu lệnh. Mọi thao tác cần ACID **phải** là hàm SQL gọi bằng `supabase.rpc()`.
 
-| Hàm | Tham số | Trả về | Mục đích |
-| --- | --- | --- | --- |
+| Hàm                                                  | Tham số                                                                                          | Trả về                                                    | Mục đích                                                                                                                                                                                        |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------ | --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `reserve_stock(p_order_ref, p_items, p_expires_at?)` | `p_items` JSONB `[{"variant_id","warehouse_id?","quantity"}]`; mặc định kho default, hạn 20 phút | JSONB `{order_ref, already_reserved, items, expires_at?}` | Khóa advisory theo `order_ref`, khóa dòng `inventory_stocks`, kiểm tra available, tăng `reserved`, tạo reservation ACTIVE + thẻ kho `RESERVE`. Idempotent: gọi lại trả `already_reserved: true` |
-| `release_stock(p_order_ref)` | mã đơn | JSONB `{order_ref, released_items}` | Nhả reservation ACTIVE, giảm `reserved`, ghi `RELEASE`. Không lỗi nếu không còn reservation |
-| `fulfill_stock(p_order_ref)` | mã đơn | JSONB `{order_ref, fulfilled_items}` | Giảm cả `on_hand` và `reserved`, reservation `FULFILLED`, ghi `FULFILL` |
-| `release_expired_reservations()` | — | integer | Nhả reservation ACTIVE quá hạn; chạy mỗi phút bởi `pg_cron` |
-| `cancel_timeout_orders()` | — | integer | Hủy đơn `PENDING_PAYMENT` quá `payment_expires_at`, gọi `release_stock`, ghi lịch sử; chạy mỗi phút |
+| `release_stock(p_order_ref)`                         | mã đơn                                                                                           | JSONB `{order_ref, released_items}`                       | Nhả reservation ACTIVE, giảm `reserved`, ghi `RELEASE`. Không lỗi nếu không còn reservation                                                                                                     |
+| `fulfill_stock(p_order_ref)`                         | mã đơn                                                                                           | JSONB `{order_ref, fulfilled_items}`                      | Giảm cả `on_hand` và `reserved`, reservation `FULFILLED`, ghi `FULFILL`                                                                                                                         |
+| `release_expired_reservations()`                     | —                                                                                                | integer                                                   | Nhả reservation ACTIVE quá hạn; chạy mỗi phút bởi `pg_cron`                                                                                                                                     |
+| `cancel_timeout_orders()`                            | —                                                                                                | integer                                                   | Hủy đơn `PENDING_PAYMENT` quá `payment_expires_at`, gọi `release_stock`, ghi lịch sử; chạy mỗi phút                                                                                             |
 
 Quy tắc:
 
@@ -184,18 +184,18 @@ const { data, error } = await supabase.rpc('reserve_stock', {
 
 ## 5. Trigger và ràng buộc đáng chú ý
 
-| Trigger / ràng buộc | Tác dụng |
-| --- | --- |
-| `trg_<table>_updated_at` | Tự cập nhật `updated_at` cho các bảng có cột này |
-| `trg_addresses_limits` | Tối đa 10 địa chỉ/user, đúng 1 địa chỉ mặc định (BR-M01-04) |
-| `trg_product_images_limits` | Tối đa 10 ảnh/sản phẩm (M02-F07) |
-| `trg_banners_limit` | Tối đa 5 banner `HOME_HERO` đang bật (BR-M09-04) |
-| `trg_review_media_limit` | Tối đa 5 ảnh hoặc 1 video/review (BR-M10-05) |
-| `trg_ticket_attachment_limit` | Tối đa 5 ảnh hoặc 1 video/tin nhắn ticket |
-| `trg_reviews_sync_rating` | Đồng bộ `rating_avg`, `rating_count` khi review thay đổi |
-| `trg_audit_logs_immutable` | Chặn UPDATE/DELETE `audit_logs` (SYS-NFR-07) |
-| `trg_order_status_history_immutable` | Chặn UPDATE/DELETE lịch sử trạng thái (NFR-M06-03) |
-| `trg_stock_movement_logs_immutable` | Chặn UPDATE/DELETE thẻ kho (NFR-M08-03) |
+| Trigger / ràng buộc                  | Tác dụng                                                    |
+| ------------------------------------ | ----------------------------------------------------------- |
+| `trg_<table>_updated_at`             | Tự cập nhật `updated_at` cho các bảng có cột này            |
+| `trg_addresses_limits`               | Tối đa 10 địa chỉ/user, đúng 1 địa chỉ mặc định (BR-M01-04) |
+| `trg_product_images_limits`          | Tối đa 10 ảnh/sản phẩm (M02-F07)                            |
+| `trg_banners_limit`                  | Tối đa 5 banner `HOME_HERO` đang bật (BR-M09-04)            |
+| `trg_review_media_limit`             | Tối đa 5 ảnh hoặc 1 video/review (BR-M10-05)                |
+| `trg_ticket_attachment_limit`        | Tối đa 5 ảnh hoặc 1 video/tin nhắn ticket                   |
+| `trg_reviews_sync_rating`            | Đồng bộ `rating_avg`, `rating_count` khi review thay đổi    |
+| `trg_audit_logs_immutable`           | Chặn UPDATE/DELETE `audit_logs` (SYS-NFR-07)                |
+| `trg_order_status_history_immutable` | Chặn UPDATE/DELETE lịch sử trạng thái (NFR-M06-03)          |
+| `trg_stock_movement_logs_immutable`  | Chặn UPDATE/DELETE thẻ kho (NFR-M08-03)                     |
 
 Các CHECK quan trọng:
 
@@ -218,14 +218,14 @@ Các CHECK quan trọng:
 
 `seed.sql` tạo:
 
-| Nội dung | Ghi chú |
-| --- | --- |
-| `system_settings` — 36 khóa | Giá trị mặc định theo SRS §2.7, khớp `business-rules.js` |
-| `membership_tiers` | Bronze/Silver/Gold/Diamond, hệ số điểm 1.0/1.2/1.5/2.0 |
-| `shipping_fee_rules` | Nội thành 25.000đ; tỉnh 35.000–50.000đ; miễn phí từ 500.000đ |
-| `warehouses` | 1 kho mặc định, địa chỉ DEMO |
-| `faq_categories` | 4 nhóm FAQ |
-| `categories` | 5 danh mục cấp 1 **DEMO** từ Blueprint §3.1, đánh dấu `[DEMO]` |
+| Nội dung                    | Ghi chú                                                        |
+| --------------------------- | -------------------------------------------------------------- |
+| `system_settings` — 36 khóa | Giá trị mặc định theo SRS §2.7, khớp `business-rules.js`       |
+| `membership_tiers`          | Bronze/Silver/Gold/Diamond, hệ số điểm 1.0/1.2/1.5/2.0         |
+| `shipping_fee_rules`        | Nội thành 25.000đ; tỉnh 35.000–50.000đ; miễn phí từ 500.000đ   |
+| `warehouses`                | 1 kho mặc định, địa chỉ DEMO                                   |
+| `faq_categories`            | 4 nhóm FAQ                                                     |
+| `categories`                | 5 danh mục cấp 1 **DEMO** từ Blueprint §3.1, đánh dấu `[DEMO]` |
 
 Seed **không** tạo tài khoản/mật khẩu/hash. Script tạo Admin đầu tiên là TODO của M01 (`scripts/create-admin.js`), đọc `ADMIN_EMAIL`/`ADMIN_PASSWORD` từ biến môi trường. Dữ liệu demo phải được thay trước go-live (OPEN_DECISIONS #29).
 

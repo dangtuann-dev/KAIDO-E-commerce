@@ -25,14 +25,14 @@ SELECT jobid, jobname, schedule, command, active FROM cron.job ORDER BY jobid;
 
 ## 2. Seed có gì
 
-| Nội dung | Ghi chú |
-|---|---|
+| Nội dung                    | Ghi chú                                                                       |
+| --------------------------- | ----------------------------------------------------------------------------- |
 | `system_settings` (36 khóa) | Giá trị mặc định theo SRS §2.7, khớp `src/shared/constants/business-rules.js` |
-| `membership_tiers` | Bronze / Silver / Gold / Diamond, hệ số điểm 1.0 / 1.2 / 1.5 / 2.0 |
-| `shipping_fee_rules` | Nội thành 25.000đ; tỉnh 35.000–50.000đ; miễn phí từ 500.000đ |
-| `warehouses` | 1 kho mặc định, địa chỉ là DEMO |
-| `faq_categories` | 4 nhóm: Giao hàng, Đổi trả, Thanh toán, Bảo hành và Kỹ thuật |
-| `categories` | 5 danh mục cấp 1 **DEMO** từ Blueprint §3.1, đánh dấu `[DEMO]` trong mô tả |
+| `membership_tiers`          | Bronze / Silver / Gold / Diamond, hệ số điểm 1.0 / 1.2 / 1.5 / 2.0            |
+| `shipping_fee_rules`        | Nội thành 25.000đ; tỉnh 35.000–50.000đ; miễn phí từ 500.000đ                  |
+| `warehouses`                | 1 kho mặc định, địa chỉ là DEMO                                               |
+| `faq_categories`            | 4 nhóm: Giao hàng, Đổi trả, Thanh toán, Bảo hành và Kỹ thuật                  |
+| `categories`                | 5 danh mục cấp 1 **DEMO** từ Blueprint §3.1, đánh dấu `[DEMO]` trong mô tả    |
 
 Seed **không** tạo tài khoản hay mật khẩu/hash. Đây là quy định bảo mật của dự án.
 
@@ -60,13 +60,13 @@ TOY-M01 sẽ cung cấp script `scripts/create-admin.js` (TODO) đọc `ADMIN_EM
 
 Supabase JS đi qua PostgREST nên không có transaction nhiều câu lệnh. Mọi thao tác cần ACID phải gọi bằng `supabase.rpc()`.
 
-| Hàm | Tham số | Kết quả / mục đích |
-|---|---|---|
+| Hàm                                                  | Tham số                                                                                                                                                                | Kết quả / mục đích                                                                                             |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | `reserve_stock(p_order_ref, p_items, p_expires_at?)` | `p_items` là JSONB array `[{"variant_id":"...","warehouse_id":"...","quantity":2}]`; bỏ `warehouse_id` để dùng kho mặc định; `p_expires_at` mặc định `now() + 20 phút` | Giữ tồn, ghi `stock_reservations` + thẻ kho. Idempotent theo `order_ref`: gọi lại trả `already_reserved: true` |
-| `release_stock(p_order_ref)` | mã đơn | Nhả toàn bộ reservation `ACTIVE`, ghi thẻ kho `RELEASE` |
-| `fulfill_stock(p_order_ref)` | mã đơn | Xuất kho thật: giảm `on_hand` và `reserved`, ghi `FULFILL` |
-| `release_expired_reservations()` | — | Nhả reservation quá hạn; trả số dòng đã nhả. Chạy mỗi phút bằng `pg_cron` |
-| `cancel_timeout_orders()` | — | Hủy đơn quá hạn thanh toán, nhả tồn, ghi lịch sử trạng thái; trả số đơn đã hủy. Chạy mỗi phút bằng `pg_cron` |
+| `release_stock(p_order_ref)`                         | mã đơn                                                                                                                                                                 | Nhả toàn bộ reservation `ACTIVE`, ghi thẻ kho `RELEASE`                                                        |
+| `fulfill_stock(p_order_ref)`                         | mã đơn                                                                                                                                                                 | Xuất kho thật: giảm `on_hand` và `reserved`, ghi `FULFILL`                                                     |
+| `release_expired_reservations()`                     | —                                                                                                                                                                      | Nhả reservation quá hạn; trả số dòng đã nhả. Chạy mỗi phút bằng `pg_cron`                                      |
+| `cancel_timeout_orders()`                            | —                                                                                                                                                                      | Hủy đơn quá hạn thanh toán, nhả tồn, ghi lịch sử trạng thái; trả số đơn đã hủy. Chạy mỗi phút bằng `pg_cron`   |
 
 Ví dụ gọi từ server (không bao giờ gọi ở client):
 
