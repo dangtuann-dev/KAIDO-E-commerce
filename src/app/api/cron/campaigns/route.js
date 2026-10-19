@@ -1,3 +1,4 @@
+import 'server-only';
 /**
  * [CRON] Kích hoạt/kết thúc chiến dịch quảng bá theo lịch — M09-F05.
  * Vercel Cron: 0 0 * * * (xem vercel.json). Bảo vệ bằng CRON_SECRET.

@@ -1,0 +1,36 @@
+import 'server-only';
+import { BUSINESS_RULES } from '@/shared/constants/business-rules.js';
+import { COUPON_SCOPE_VALUES, DISCOUNT_TYPE_VALUES } from '@/shared/constants/loyalty.js';
+
+export const MODULE_CODE = 'TOY-M09';
+
+export const BANNER_POSITIONS = Object.freeze({
+  HOME_HERO: 'HOME_HERO',
+  HOME_PROMO: 'HOME_PROMO',
+  CATEGORY: 'CATEGORY',
+  SIDEBAR: 'SIDEBAR',
+});
+
+export const BANNER_POSITION_VALUES = Object.freeze(Object.values(BANNER_POSITIONS));
+
+export const CONTENT_STATUS = Object.freeze({
+  DRAFT: 'DRAFT',
+  SCHEDULED: 'SCHEDULED',
+  PUBLISHED: 'PUBLISHED',
+  ARCHIVED: 'ARCHIVED',
+});
+
+export const CAMPAIGN_STATUS = Object.freeze({
+  DRAFT: 'DRAFT',
+  SCHEDULED: 'SCHEDULED',
+  ACTIVE: 'ACTIVE',
+  ENDED: 'ENDED',
+  CANCELLED: 'CANCELLED',
+});
+
+export const COUPON_TYPES = Object.freeze(DISCOUNT_TYPE_VALUES);
+export const COUPON_SCOPES = Object.freeze(COUPON_SCOPE_VALUES);
+
+export const MAX_HOME_HERO_BANNERS = BUSINESS_RULES.MARKETING.MAX_HOME_HERO_BANNERS;
+export const VOUCHER_RATE_LIMIT_PER_MINUTE = BUSINESS_RULES.MARKETING.VOUCHER_RATE_LIMIT_PER_MINUTE;
+export const MAX_BANNER_FILE_SIZE_MB = BUSINESS_RULES.MARKETING.MAX_BANNER_FILE_SIZE_MB;

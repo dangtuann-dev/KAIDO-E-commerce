@@ -1,3 +1,4 @@
+import 'server-only';
 /**
  * [CRON] Tự đóng ticket RESOLVED quá 72 giờ — BR-M10-04.
  * Vercel Cron: 0 2 * * * (xem vercel.json). Bảo vệ bằng CRON_SECRET.

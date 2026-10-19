@@ -1,3 +1,4 @@
+import 'server-only';
 /**
  * [APP] GET /api/v1/health — viết tay, không qua registry.
  * SRS: Giai đoạn 4 — trả trạng thái app và DB; 200 cả khi Supabase chưa cấu hình

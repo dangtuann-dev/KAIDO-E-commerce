@@ -1,0 +1,21 @@
+import 'server-only';
+import { BUSINESS_RULES } from '@/shared/constants/business-rules.js';
+import {
+  AGE_GROUP_VALUES,
+  PRODUCT_STATUS_VALUES,
+  SORT_OPTION_VALUES,
+} from '@/shared/constants/product.js';
+
+export const MODULE_CODE = 'TOY-M02';
+
+export const MAX_PRODUCT_IMAGES = BUSINESS_RULES.CATALOG.MAX_PRODUCT_IMAGES;
+export const PRODUCT_IMAGE_SIZE = BUSINESS_RULES.CATALOG.PRODUCT_IMAGE_SIZE;
+export const DEFAULT_PAGE_SIZE = BUSINESS_RULES.CATALOG.DEFAULT_PAGE_SIZE;
+export const LOW_STOCK_THRESHOLD = BUSINESS_RULES.CATALOG.DEFAULT_LOW_STOCK_THRESHOLD;
+
+export const PRODUCT_STATUSES = Object.freeze(PRODUCT_STATUS_VALUES);
+export const PRODUCT_AGE_GROUPS = Object.freeze(AGE_GROUP_VALUES);
+export const PRODUCT_SORTS = Object.freeze(SORT_OPTION_VALUES);
+
+export const RELATED_PRODUCTS_LIMIT = 8;
+export const PRODUCT_DESCRIPTION_MAX_LENGTH = 5000;

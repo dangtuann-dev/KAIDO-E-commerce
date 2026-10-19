@@ -1,3 +1,4 @@
+import 'server-only';
 /**
  * [CRON] Quét điểm thưởng hết hạn — M07-F07.
  * Vercel Cron: 0 1 * * * (xem vercel.json). Bảo vệ bằng CRON_SECRET.

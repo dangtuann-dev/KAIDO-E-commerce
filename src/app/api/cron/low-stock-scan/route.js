@@ -1,3 +1,4 @@
+import 'server-only';
 /**
  * [CRON] Quét tồn kho thấp và cảnh báo — M08-F11, M02-F13.
  * Vercel Cron: 0 3 * * * (xem vercel.json). Bảo vệ bằng CRON_SECRET.
