@@ -1,12 +1,47 @@
 import 'server-only';
+import bcrypt from 'bcryptjs';
 import { NotImplementedError } from '@/server/http/errors.js';
+import { findUserByEmail, findUserByPhone, createUser } from './repository.js';
+
+const BCRYPT_ROUNDS = 12;
 
 /**
  * TODO(M01-F01) — Tạo tài khoản CUSTOMER, hash Bcrypt, kiểm tra email/SĐT duy nhất (BR-M01-01, BR-M01-03).
  */
-export async function registerAccount() {
-  throw new NotImplementedError('M01-F01');
-}
+export async function registerAccount({ email, password, full_name, phone }) {
+  const normalizedEmail = email.trim().toLowerCase();
+
+  if (await findUserByEmail(normalizedEmail)) {
+    throw Object.assign(new Error('EMAIL_TAKEN'), {
+      status: 409,
+      code: 'EMAIL_TAKEN',
+      field: 'email',
+    });
+  }
+
+  if (phone && (await findUserByPhone(phone))) {
+    throw Object.assign(new Error('PHONE_TAKEN'), {
+      status: 409,
+      code: 'PHONE_TAKEN',
+      field: 'phone',
+    });
+  }
+
+  const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+
+  const user = await createUser({
+    email: normalizedEmail,
+    phone: phone || null,
+    full_name: full_name.trim(),
+    password_hash: passwordHash,
+    role: 'CUSTOMER',
+    status: 'ACTIVE',
+  });
+
+  // Không bao giờ trả password_hash ra ngoài
+  const { password_hash: _omit, ...safeUser } = user;
+  return safeUser;
+ } 
 
 /**
  * TODO(M01-F02) — Xác thực mật khẩu, đếm số lần sai và khóa 15 phút sau 5 lần (BR-M01-02).

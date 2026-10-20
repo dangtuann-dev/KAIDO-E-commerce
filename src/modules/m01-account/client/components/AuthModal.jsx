@@ -42,7 +42,7 @@ const MODES = {
   },
 };
 
-const PHONE_PATTERN = /^(?:\+84|0)\d{9,10}$/;
+const PHONE_PATTERN = /^0[35789]\d{8}$/;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function normalizeMode(value) {
@@ -198,11 +198,11 @@ function RegisterForm({ onDone, onSwitchMode }) {
 
   async function onSubmit(values) {
     const body = {
-      full_name: values.full_name,
-      email: values.email,
-      phone: values.phone,
-      password: values.password,
-    };
+    full_name: values.full_name,
+    email: values.email,
+    phone: values.phone.replace(/[\s.-]/g, '').replace(/^\+84/, '0'),
+    password: values.password,
+  };
 
     try {
       const payload = await registerMutation.mutateAsync({ body });

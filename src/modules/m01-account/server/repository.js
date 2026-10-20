@@ -1,4 +1,5 @@
 import 'server-only';
+import { randomUUID } from 'node:crypto';
 import { NotImplementedError } from '@/server/http/errors.js';
 
 /** Bảng M01 sở hữu (xem README để biết quy ước dùng chung). */
@@ -9,6 +10,8 @@ export const OWNED_TABLES = Object.freeze([
   'password_reset_otps',
   'notifications',
 ]);
+
+const store = (globalThis.__kaidoUsers ??= new Map());
 
 /**
  * TODO: thay stub bằng truy vấn Supabase/PostgREST khi triển khai service.
@@ -24,15 +27,38 @@ export async function findUserById(_id) {
 /**
  * TODO(M01-F01) — bảng `users`.
  */
-export async function findUserByEmail(_email) {
-  throw new NotImplementedError('M01-F01');
+export async function findUserByEmail(email) {
+  const target = String(email).trim().toLowerCase();
+  for (const user of store.values()) {
+    if (user.email === target && !user.deleted_at) return user;
+  }
+  return null;
+}
+
+/**
+ * TODO(M01-F01) — bảng `users`, tìm theo số điện thoại.
+ */
+export async function findUserByPhone(phone) {
+  for (const user of store.values()) {
+    if (user.phone === phone && !user.deleted_at) return user;
+  }
+  return null;
 }
 
 /**
  * TODO(M01-F01) — bảng `users`.
  */
-export async function createUser(_data) {
-  throw new NotImplementedError('M01-F01');
+export async function createUser(data) {
+  const now = new Date().toISOString();
+  const user = {
+    id: randomUUID(),
+    created_at: now,
+    updated_at: now,
+    deleted_at: null,
+    ...data,
+  };
+  store.set(user.id, user);
+  return user;
 }
 
 /**
