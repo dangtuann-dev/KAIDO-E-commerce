@@ -20,8 +20,8 @@ const store = (globalThis.__kaidoUsers ??= new Map());
 /**
  * TODO(M01-F03) — bảng `users`.
  */
-export async function findUserById(_id) {
-  throw new NotImplementedError('M01-F03');
+export async function findUserById(id) {
+  return store.get(id) ?? null;
 }
 
 /**
@@ -64,8 +64,12 @@ export async function createUser(data) {
 /**
  * TODO(M01-F03) — bảng `users`.
  */
-export async function updateUser(_id, _patch) {
-  throw new NotImplementedError('M01-F03');
+export async function updateUser(id, patch) {
+  const user = store.get(id);
+  if (!user) return null;
+  const updated = { ...user, ...patch, updated_at: new Date().toISOString() };
+  store.set(id, updated);
+  return updated;
 }
 
 /**

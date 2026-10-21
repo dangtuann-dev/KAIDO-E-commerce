@@ -1,18 +1,26 @@
-import 'server-only';
+import { randomUUID } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { NotImplementedError } from '@/server/http/errors.js';
-import { findUserByEmail, findUserByPhone, createUser } from './repository.js';
+import { BUSINESS_RULES } from '@/shared/constants/business-rules.js';
+import { signAccessToken, signRefreshToken } from '@/server/auth/jwt.js';
+import {
+  findUserByEmail,
+  findUserByPhone,
+  findUserById,
+  createUser,
+  updateUser,
+} from './repository.js';
 
 const BCRYPT_ROUNDS = 12;
 
 /**
- * TODO(M01-F01) — Tạo tài khoản CUSTOMER, hash Bcrypt, kiểm tra email/SĐT duy nhất (BR-M01-01, BR-M01-03).
+ * M01-F01 — Tạo tài khoản CUSTOMER (BR-M01-01, BR-M01-03).
  */
 export async function registerAccount({ email, password, full_name, phone }) {
   const normalizedEmail = email.trim().toLowerCase();
 
   if (await findUserByEmail(normalizedEmail)) {
-    throw Object.assign(new Error('EMAIL_TAKEN'), {
+    throw Object.assign(new Error('Email này đã được sử dụng.'), {
       status: 409,
       code: 'EMAIL_TAKEN',
       field: 'email',
@@ -20,7 +28,7 @@ export async function registerAccount({ email, password, full_name, phone }) {
   }
 
   if (phone && (await findUserByPhone(phone))) {
-    throw Object.assign(new Error('PHONE_TAKEN'), {
+    throw Object.assign(new Error('Số điện thoại này đã được sử dụng.'), {
       status: 409,
       code: 'PHONE_TAKEN',
       field: 'phone',
@@ -38,30 +46,104 @@ export async function registerAccount({ email, password, full_name, phone }) {
     status: 'ACTIVE',
   });
 
-  // Không bao giờ trả password_hash ra ngoài
   const { password_hash: _omit, ...safeUser } = user;
   return safeUser;
- } 
-
-/**
- * TODO(M01-F02) — Xác thực mật khẩu, đếm số lần sai và khóa 15 phút sau 5 lần (BR-M01-02).
- */
-export async function login() {
-  throw new NotImplementedError('M01-F02');
 }
 
 /**
- * TODO(M01-F02) — Thu hồi refresh token hiện tại và xóa cookie HttpOnly.
+ * M01-F02 — Đăng nhập bằng email hoặc số điện thoại.
+ * Sau 5 lần sai, tài khoản bị khóa 15 phút (BR-M01-02).
  */
-export async function logout() {
-  throw new NotImplementedError('M01-F02');
+export async function login({ email, password }) {
+  const identifier = String(email).trim();
+  const user = identifier.includes('@')
+    ? await findUserByEmail(identifier.toLowerCase())
+    : await findUserByPhone(identifier.replace(/[\s.-]/g, '').replace(/^\+84/, '0'));
+
+  const invalid = () =>
+    Object.assign(new Error('Thông tin đăng nhập không đúng.'), {
+      status: 401,
+      code: 'INVALID_CREDENTIALS',
+    });
+
+  if (!user) throw invalid();
+
+  const now = Date.now();
+  if (user.locked_until && new Date(user.locked_until).getTime() > now) {
+    throw Object.assign(
+      new Error(`Tài khoản đang bị tạm khóa. Vui lòng thử lại sau ${BUSINESS_RULES.AUTH.LOCKOUT_MINUTES} phút.`),
+      { status: 423, code: 'ACCOUNT_LOCKED' },
+    );
+  }
+
+  const passwordOk = await bcrypt.compare(password, user.password_hash ?? '');
+
+  if (!passwordOk) {
+    const failed = (user.failed_login_count ?? 0) + 1;
+    const shouldLock = failed >= BUSINESS_RULES.AUTH.MAX_LOGIN_ATTEMPTS;
+
+    await updateUser(user.id, {
+      failed_login_count: shouldLock ? 0 : failed,
+      locked_until: shouldLock
+        ? new Date(now + BUSINESS_RULES.AUTH.LOCKOUT_MINUTES * 60 * 1000).toISOString()
+        : user.locked_until ?? null,
+    });
+
+    if (shouldLock) {
+      throw Object.assign(
+        new Error(`Nhập sai quá nhiều lần. Tài khoản bị tạm khóa ${BUSINESS_RULES.AUTH.LOCKOUT_MINUTES} phút.`),
+        { status: 423, code: 'ACCOUNT_LOCKED' },
+      );
+    }
+    throw invalid();
+  }
+
+  if (user.status !== 'ACTIVE') {
+    throw Object.assign(new Error('Tài khoản đã bị vô hiệu hóa.'), {
+      status: 403,
+      code: 'ACCOUNT_DISABLED',
+    });
+  }
+
+  await updateUser(user.id, {
+    failed_login_count: 0,
+    locked_until: null,
+    last_login_at: new Date().toISOString(),
+  });
+
+  const { token: accessToken, expiresIn } = await signAccessToken({
+    userId: user.id,
+    role: user.role,
+    email: user.email,
+  });
+  const { token: refreshToken, expiresIn: refreshTtl } = await signRefreshToken({
+    userId: user.id,
+    role: user.role,
+  });
+
+  const { password_hash: _omit, ...safeUser } = user;
+  return {
+    access_token: accessToken,
+    expires_in: expiresIn,
+    user_info: safeUser,
+    refresh_token: refreshToken,
+    refresh_expires_in: refreshTtl,
+  };
 }
 
 /**
- * TODO(M01-F03) — Trả hồ sơ của người dùng đang đăng nhập.
+ * M01-F03 — Trả hồ sơ của người dùng đang đăng nhập.
  */
-export async function getProfile() {
-  throw new NotImplementedError('M01-F03');
+export async function getProfile({ userId }) {
+  const user = await findUserById(userId);
+  if (!user) {
+    throw Object.assign(new Error('Không tìm thấy người dùng.'), {
+      status: 404,
+      code: 'NOT_FOUND',
+    });
+  }
+  const { password_hash: _omit, ...safeUser } = user;
+  return safeUser;
 }
 
 /**
