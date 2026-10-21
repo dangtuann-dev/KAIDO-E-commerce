@@ -147,10 +147,38 @@ export async function getProfile({ userId }) {
 }
 
 /**
- * TODO(M01-F03) — Cập nhật họ tên, SĐT, ngày sinh của bé, avatar.
+ * M01-F03 — Cập nhật họ tên, SĐT, ngày sinh của bé, avatar.
+ * Chỉ ghi các trường được gửi lên; SĐT mới không được trùng tài khoản khác.
  */
-export async function updateProfile() {
-  throw new NotImplementedError('M01-F03');
+export async function updateProfile({ userId, body }) {
+  const user = await findUserById(userId);
+  if (!user) {
+    throw Object.assign(new Error('Không tìm thấy người dùng.'), {
+      status: 404,
+      code: 'NOT_FOUND',
+    });
+  }
+
+  const patch = {};
+  if (body.full_name !== undefined) patch.full_name = body.full_name.trim();
+  if (body.child_birthdate !== undefined) patch.child_birthdate = body.child_birthdate;
+  if (body.avatar_url !== undefined) patch.avatar_url = body.avatar_url;
+
+  if (body.phone !== undefined && body.phone !== user.phone) {
+    const owner = await findUserByPhone(body.phone);
+    if (owner && owner.id !== userId) {
+      throw Object.assign(new Error('Số điện thoại này đã được sử dụng.'), {
+        status: 409,
+        code: 'PHONE_TAKEN',
+        field: 'phone',
+      });
+    }
+    patch.phone = body.phone;
+  }
+
+  const updated = await updateUser(userId, patch);
+  const { password_hash: _omit, ...safeUser } = updated;
+  return safeUser;
 }
 
 /**
