@@ -10,8 +10,77 @@ import {
   createUser,
   updateUser,
 } from './repository.js';
+import 'server-only';
+import { z } from 'zod';
+import {
+  listAddressesByUser,
+  findAddressForUser,
+  insertAddress,
+  patchAddress,
+  clearOtherDefaults,
+} from './repository.js';
 
 const BCRYPT_ROUNDS = 12;
+const MAX_ADDRESSES = 10;
+
+const addressSchema = z.object({
+  recipient_name: z.string().trim().min(2, 'Tên người nhận tối thiểu 2 ký tự.').max(50),
+  phone: z.string().regex(/^0[35789]\d{8}$/, 'Số điện thoại không hợp lệ.'),
+  province_name: z.string().trim().min(1, 'Vui lòng nhập tỉnh/thành phố.'),
+  district_name: z.string().trim().nullable().optional(),
+  ward_name: z.string().trim().min(1, 'Vui lòng nhập phường/xã.'),
+  street_address: z.string().trim().min(5, 'Địa chỉ tối thiểu 5 ký tự.').max(255),
+  is_default: z.boolean().optional(),
+});
+
+function fail(status, code, message, details) {
+  return Object.assign(new Error(message), { status, code, details });
+}
+
+function normalizePhone(raw) {
+  const s = String(raw ?? '').replace(/[\s.-]/g, '');
+  return s.startsWith('+84') ? `0${s.slice(3)}` : s;
+}
+
+function parseAddressInput(body) {
+  const result = addressSchema.safeParse({ ...body, phone: normalizePhone(body?.phone) });
+  if (!result.success) {
+    const first = result.error.issues[0];
+    throw fail(
+      422,
+      'VALIDATION_ERROR',
+      first.message,
+      result.error.issues.map((i) => ({ field: i.path[0], message: i.message })),
+    );
+  }
+  return result.data;
+}
+
+// Tạm thời: mã tỉnh/phường lấy từ tên, cho đến khi chốt nguồn dữ liệu ĐVVC (OPEN_DECISIONS #12)
+function slugify(text) {
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+function toRow(input) {
+  return {
+    recipient_name: input.recipient_name,
+    phone: input.phone,
+    province_code: slugify(input.province_name),
+    province_name: input.province_name,
+    district_code: input.district_name ? slugify(input.district_name) : null,
+    district_name: input.district_name || null,
+    ward_code: slugify(input.ward_name),
+    ward_name: input.ward_name,
+    street_address: input.street_address,
+  };
+}
 
 /**
  * M01-F01 — Tạo tài khoản CUSTOMER (BR-M01-01, BR-M01-03).
@@ -191,36 +260,64 @@ export async function changePassword() {
 /**
  * TODO(M01-F04) — Liệt kê tối đa 10 địa chỉ, đúng một địa chỉ mặc định (BR-M01-04).
  */
-export async function listAddresses() {
-  throw new NotImplementedError('M01-F04');
+export async function listAddresses({ userId }) {
+  return listAddressesByUser(userId);
 }
 
-/**
- * TODO(M01-F04) — Thêm địa chỉ mới.
- */
-export async function createAddress() {
-  throw new NotImplementedError('M01-F04');
+/** M01-F04 — Thêm địa chỉ, tối đa 10 địa chỉ; địa chỉ đầu tiên tự là mặc định. */
+export async function createAddress({ userId, body }) {
+  const input = parseAddressInput(body);
+  const existing = await listAddressesByUser(userId);
+
+  if (existing.length >= MAX_ADDRESSES) {
+    throw fail(409, 'ADDRESS_LIMIT', `Mỗi tài khoản tối đa ${MAX_ADDRESSES} địa chỉ.`);
+  }
+
+  const makeDefault = existing.length === 0 || input.is_default === true;
+  const row = await insertAddress({ user_id: userId, ...toRow(input), is_default: makeDefault });
+  if (makeDefault) await clearOtherDefaults(userId, row.id);
+  return row;
 }
 
-/**
- * TODO(M01-F04) — Sửa địa chỉ thuộc chủ tài khoản.
- */
-export async function updateAddress() {
-  throw new NotImplementedError('M01-F04');
+/** M01-F04 — Sửa địa chỉ thuộc chủ tài khoản (BR-M01-04). */
+export async function updateAddress({ userId, id, body }) {
+  const current = await findAddressForUser(id, userId);
+  if (!current) throw fail(404, 'NOT_FOUND', 'Không tìm thấy địa chỉ.');
+
+  const input = parseAddressInput(body);
+  if (input.is_default === false && current.is_default) {
+    throw fail(422, 'DEFAULT_REQUIRED', 'Hãy chọn địa chỉ mặc định khác trước khi bỏ mặc định.');
+  }
+
+  const isDefault = current.is_default || input.is_default === true;
+  const updated = await patchAddress(id, { ...toRow(input), is_default: isDefault });
+  if (isDefault) await clearOtherDefaults(userId, id);
+  return updated;
 }
 
-/**
- * TODO(M01-F04) — Xóa mềm và tự chuyển địa chỉ mặc định nếu cần (BR-M01-04).
- */
-export async function deleteAddress() {
-  throw new NotImplementedError('M01-F04');
+/** M01-F04 — Xóa mềm; không xóa địa chỉ mặc định khi còn địa chỉ khác (khớp trigger trong schema). */
+export async function deleteAddress({ userId, id }) {
+  const current = await findAddressForUser(id, userId);
+  if (!current) throw fail(404, 'NOT_FOUND', 'Không tìm thấy địa chỉ.');
+
+  if (current.is_default) {
+    const others = (await listAddressesByUser(userId)).filter((a) => a.id !== id);
+    if (others.length > 0) {
+      throw fail(422, 'DEFAULT_REQUIRED', 'Hãy chọn địa chỉ mặc định khác trước khi xóa địa chỉ này.');
+    }
+  }
+
+  await patchAddress(id, { deleted_at: new Date().toISOString(), is_default: false });
+  return { success: true };
 }
 
-/**
- * TODO(M01-F04) — Đặt duy nhất một địa chỉ mặc định trong cùng transaction.
- */
-export async function setDefaultAddress() {
-  throw new NotImplementedError('M01-F04');
+/** M01-F04 — Đặt địa chỉ mặc định duy nhất. */
+export async function setDefaultAddress({ userId, id }) {
+  const current = await findAddressForUser(id, userId);
+  if (!current) throw fail(404, 'NOT_FOUND', 'Không tìm thấy địa chỉ.');
+
+  await clearOtherDefaults(userId, id);
+  return patchAddress(id, { is_default: true });
 }
 
 /**

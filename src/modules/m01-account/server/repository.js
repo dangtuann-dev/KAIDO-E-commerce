@@ -1,5 +1,6 @@
 import 'server-only';
 import { randomUUID } from 'node:crypto';
+import { getSupabaseAdmin, rpc } from '@/server/db/supabase.js';
 import { NotImplementedError } from '@/server/http/errors.js';
 
 /** Bảng M01 sở hữu (xem README để biết quy ước dùng chung). */
@@ -12,6 +13,8 @@ export const OWNED_TABLES = Object.freeze([
 ]);
 
 const store = (globalThis.__kaidoUsers ??= new Map());
+
+const nowIso = () => new Date().toISOString();
 
 /**
  * TODO: thay stub bằng truy vấn Supabase/PostgREST khi triển khai service.
@@ -73,45 +76,44 @@ export async function updateUser(id, patch) {
 }
 
 /**
- * TODO(M01-F04) — bảng `addresses`.
+ * M01-F04 — bảng `addresses`.
  */
-export async function listAddressesByUser(_userId) {
-  throw new NotImplementedError('M01-F04');
+export async function listAddressesByUser(userId) {
+  return [...store.values()]
+    .filter((a) => a.user_id === userId && !a.deleted_at)
+    .sort(
+      (a, b) =>
+        Number(b.is_default) - Number(a.is_default) ||
+        a.created_at.localeCompare(b.created_at),
+    );
 }
 
-/**
- * TODO(M01-F04) — bảng `addresses`.
- */
-export async function countAddressesByUser(_userId) {
-  throw new NotImplementedError('M01-F04');
+export async function findAddressForUser(id, userId) {
+  const row = store.get(id);
+  return row && row.user_id === userId && !row.deleted_at ? row : null;
 }
 
-/**
- * TODO(M01-F04) — bảng `addresses`.
- */
-export async function createAddress(_userId, _data) {
-  throw new NotImplementedError('M01-F04');
+export async function insertAddress(data) {
+  const t = nowIso();
+  const row = { id: randomUUID(), created_at: t, updated_at: t, deleted_at: null, ...data };
+  store.set(row.id, row);
+  return row;
 }
 
-/**
- * TODO(M01-F04) — bảng `addresses`.
- */
-export async function updateAddress(_id, _userId, _patch) {
-  throw new NotImplementedError('M01-F04');
+export async function patchAddress(id, patch) {
+  const row = store.get(id);
+  if (!row) return null;
+  const updated = { ...row, ...patch, updated_at: nowIso() };
+  store.set(id, updated);
+  return updated;
 }
 
-/**
- * TODO(M01-F04) — bảng `addresses`.
- */
-export async function softDeleteAddress(_id, _userId) {
-  throw new NotImplementedError('M01-F04');
-}
-
-/**
- * TODO(M01-F04) — bảng `addresses`.
- */
-export async function setDefaultAddress(_id, _userId) {
-  throw new NotImplementedError('M01-F04');
+export async function clearOtherDefaults(userId, exceptId) {
+  for (const row of store.values()) {
+    if (row.user_id === userId && row.id !== exceptId && row.is_default && !row.deleted_at) {
+      store.set(row.id, { ...row, is_default: false, updated_at: nowIso() });
+    }
+  }
 }
 
 /**
