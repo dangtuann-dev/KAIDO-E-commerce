@@ -1,6 +1,5 @@
 import 'server-only';
 import { randomUUID } from 'node:crypto';
-import { getSupabaseAdmin, rpc } from '@/server/db/supabase.js';
 import { NotImplementedError } from '@/server/http/errors.js';
 
 /** Bảng M01 sở hữu (xem README để biết quy ước dùng chung). */

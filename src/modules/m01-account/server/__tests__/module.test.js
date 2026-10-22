@@ -11,7 +11,8 @@ describe('M01 — khung server', () => {
     expect(Object.keys(handlers).sort()).toEqual([...API_CODES].sort());
   });
 
-  it.each(API_CODES)('%s trả 501 NOT_IMPLEMENTED kèm mã API', async (code) => {
+  // API-M01-06/07 chưa triển khai; còn lại đã nối service thật (đăng ký/đăng nhập/hồ sơ/địa chỉ).
+  it.each(['API-M01-06', 'API-M01-07'])('%s trả 501 NOT_IMPLEMENTED kèm mã API', async (code) => {
     const error = await handlers[code]({}).catch((caught) => caught);
     expect(error).toBeInstanceOf(NotImplementedError);
     expect(error.status).toBe(501);

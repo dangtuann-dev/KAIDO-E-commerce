@@ -1,7 +1,7 @@
-import { randomUUID } from 'node:crypto';
 import bcrypt from 'bcryptjs';
-import { NotImplementedError } from '@/server/http/errors.js';
+import { AppError, NotImplementedError } from '@/server/http/errors.js';
 import { BUSINESS_RULES } from '@/shared/constants/business-rules.js';
+import { ERROR_CODES } from '@/shared/constants/error-codes.js';
 import { signAccessToken, signRefreshToken } from '@/server/auth/jwt.js';
 import {
   findUserByEmail,
@@ -34,7 +34,7 @@ const addressSchema = z.object({
 });
 
 function fail(status, code, message, details) {
-  return Object.assign(new Error(message), { status, code, details });
+  return new AppError(code, message, { status, details });
 }
 
 function normalizePhone(raw) {
@@ -99,19 +99,11 @@ export async function registerAccount({ email, password, full_name, phone }) {
   const normalizedEmail = email.trim().toLowerCase();
 
   if (await findUserByEmail(normalizedEmail)) {
-    throw Object.assign(new Error('Email này đã được sử dụng.'), {
-      status: 409,
-      code: 'EMAIL_TAKEN',
-      field: 'email',
-    });
+    throw fail(409, ERROR_CODES.EMAIL_TAKEN, undefined, { field: 'email' });
   }
 
   if (phone && (await findUserByPhone(phone))) {
-    throw Object.assign(new Error('Số điện thoại này đã được sử dụng.'), {
-      status: 409,
-      code: 'PHONE_TAKEN',
-      field: 'phone',
-    });
+    throw fail(409, ERROR_CODES.PHONE_TAKEN, undefined, { field: 'phone' });
   }
 
   const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
@@ -139,19 +131,16 @@ export async function login({ email, password }) {
     ? await findUserByEmail(identifier.toLowerCase())
     : await findUserByPhone(identifier.replace(/[\s.-]/g, '').replace(/^\+84/, '0'));
 
-  const invalid = () =>
-    Object.assign(new Error('Thông tin đăng nhập không đúng.'), {
-      status: 401,
-      code: 'INVALID_CREDENTIALS',
-    });
+  const invalid = () => fail(401, ERROR_CODES.INVALID_CREDENTIALS);
 
   if (!user) throw invalid();
 
   const now = Date.now();
   if (user.locked_until && new Date(user.locked_until).getTime() > now) {
-    throw Object.assign(
-      new Error(`Tài khoản đang bị tạm khóa. Vui lòng thử lại sau ${BUSINESS_RULES.AUTH.LOCKOUT_MINUTES} phút.`),
-      { status: 423, code: 'ACCOUNT_LOCKED' },
+    throw fail(
+      423,
+      ERROR_CODES.ACCOUNT_LOCKED,
+      `Tài khoản đang bị tạm khóa. Vui lòng thử lại sau ${BUSINESS_RULES.AUTH.LOCKOUT_MINUTES} phút.`,
     );
   }
 
@@ -169,19 +158,17 @@ export async function login({ email, password }) {
     });
 
     if (shouldLock) {
-      throw Object.assign(
-        new Error(`Nhập sai quá nhiều lần. Tài khoản bị tạm khóa ${BUSINESS_RULES.AUTH.LOCKOUT_MINUTES} phút.`),
-        { status: 423, code: 'ACCOUNT_LOCKED' },
+      throw fail(
+        423,
+        ERROR_CODES.ACCOUNT_LOCKED,
+        `Nhập sai quá nhiều lần. Tài khoản bị tạm khóa ${BUSINESS_RULES.AUTH.LOCKOUT_MINUTES} phút.`,
       );
     }
     throw invalid();
   }
 
   if (user.status !== 'ACTIVE') {
-    throw Object.assign(new Error('Tài khoản đã bị vô hiệu hóa.'), {
-      status: 403,
-      code: 'ACCOUNT_DISABLED',
-    });
+    throw fail(403, ERROR_CODES.ACCOUNT_DISABLED);
   }
 
   await updateUser(user.id, {
@@ -216,10 +203,7 @@ export async function login({ email, password }) {
 export async function getProfile({ userId }) {
   const user = await findUserById(userId);
   if (!user) {
-    throw Object.assign(new Error('Không tìm thấy người dùng.'), {
-      status: 404,
-      code: 'NOT_FOUND',
-    });
+    throw fail(404, ERROR_CODES.NOT_FOUND, 'Không tìm thấy người dùng.');
   }
   const { password_hash: _omit, ...safeUser } = user;
   return safeUser;
@@ -232,10 +216,7 @@ export async function getProfile({ userId }) {
 export async function updateProfile({ userId, body }) {
   const user = await findUserById(userId);
   if (!user) {
-    throw Object.assign(new Error('Không tìm thấy người dùng.'), {
-      status: 404,
-      code: 'NOT_FOUND',
-    });
+    throw fail(404, ERROR_CODES.NOT_FOUND, 'Không tìm thấy người dùng.');
   }
 
   const patch = {};
@@ -246,11 +227,7 @@ export async function updateProfile({ userId, body }) {
   if (body.phone !== undefined && body.phone !== user.phone) {
     const owner = await findUserByPhone(body.phone);
     if (owner && owner.id !== userId) {
-      throw Object.assign(new Error('Số điện thoại này đã được sử dụng.'), {
-        status: 409,
-        code: 'PHONE_TAKEN',
-        field: 'phone',
-      });
+      throw fail(409, ERROR_CODES.PHONE_TAKEN, undefined, { field: 'phone' });
     }
     patch.phone = body.phone;
   }
@@ -273,37 +250,22 @@ export async function changePassword({ userId, body }) {
   const parsed = changePasswordSchema.safeParse(body);
   if (!parsed.success) {
     const first = parsed.error.issues[0];
-    throw Object.assign(new Error(first.message), {
-      status: 422,
-      code: 'VALIDATION_ERROR',
-      field: first.path[0],
-    });
+    throw fail(422, ERROR_CODES.VALIDATION_ERROR, first.message, { field: first.path[0] });
   }
   const { current_password, new_password } = parsed.data;
 
   const user = await findUserById(userId);
   if (!user) {
-    throw Object.assign(new Error('Không tìm thấy người dùng.'), {
-      status: 404,
-      code: 'NOT_FOUND',
-    });
+    throw fail(404, ERROR_CODES.NOT_FOUND, 'Không tìm thấy người dùng.');
   }
 
   const currentOk = await bcrypt.compare(current_password, user.password_hash ?? '');
   if (!currentOk) {
-    throw Object.assign(new Error('Mật khẩu hiện tại không đúng.'), {
-      status: 422,
-      code: 'WRONG_PASSWORD',
-      field: 'current_password',
-    });
+    throw fail(422, ERROR_CODES.WRONG_PASSWORD, undefined, { field: 'current_password' });
   }
 
   if (current_password === new_password) {
-    throw Object.assign(new Error('Mật khẩu mới phải khác mật khẩu hiện tại.'), {
-      status: 422,
-      code: 'SAME_PASSWORD',
-      field: 'new_password',
-    });
+    throw fail(422, ERROR_CODES.SAME_PASSWORD, undefined, { field: 'new_password' });
   }
 
   const passwordHash = await bcrypt.hash(new_password, BCRYPT_ROUNDS);
