@@ -1,41 +1,43 @@
-import { describe, expect, it } from 'vitest';
-import {
-  insertAddress,
-  patchAddress,
-  listAddressesByUser,
-  findAddressForUser,
-} from '../repository.js';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const USER_A = 'user-a';
-const USER_B = 'user-b';
+const { rpc } = vi.hoisted(() => ({ rpc: vi.fn() }));
 
-describe('M01-F04 — repository địa chỉ (stub bộ nhớ, chưa nối Supabase)', () => {
-  it('lưu địa chỉ mới, tự sinh id và liệt kê theo chủ tài khoản', async () => {
-    const row = await insertAddress({ user_id: USER_A, recipient_name: 'Tester', is_default: true });
+vi.mock('@/server/db/supabase.js', () => ({
+  getSupabaseAdmin: vi.fn(),
+  rpc,
+}));
 
-    expect(row.id).toBeTruthy();
-    expect(row.user_id).toBe(USER_A);
+import { insertAddress, patchAddress } from '../repository.js';
 
-    const list = await listAddressesByUser(USER_A);
-    expect(list.map((a) => a.id)).toContain(row.id);
-    expect(await listAddressesByUser(USER_B)).toHaveLength(0);
+describe('M01-F04 — repository địa chỉ', () => {
+  beforeEach(() => {
+    rpc.mockReset();
+    rpc.mockResolvedValue({ id: 'address-1' });
   });
 
-  it('cập nhật địa chỉ theo id', async () => {
-    const row = await insertAddress({ user_id: USER_A, recipient_name: 'Tester' });
+  it('lưu địa chỉ mới bằng RPC trên database', async () => {
+    const address = { user_id: 'user-1', recipient_name: 'Nguyễn An', is_default: true };
 
-    const updated = await patchAddress(row.id, { recipient_name: 'Tester Two' });
-
-    expect(updated.recipient_name).toBe('Tester Two');
-    expect((await findAddressForUser(row.id, USER_A)).recipient_name).toBe('Tester Two');
+    await expect(insertAddress(address)).resolves.toEqual({ id: 'address-1' });
+    expect(rpc).toHaveBeenCalledWith('manage_user_address', {
+      p_action: 'create',
+      p_user_id: 'user-1',
+      p_data: { recipient_name: 'Nguyễn An', is_default: true },
+    });
   });
 
-  it('không trả địa chỉ của người dùng khác hoặc đã xóa', async () => {
-    const row = await insertAddress({ user_id: USER_B, recipient_name: 'Tester' });
+  it.each([
+    [{ recipient_name: 'Nguyễn An' }, 'update'],
+    [{ deleted_at: '2026-10-21T00:00:00.000Z', is_default: false }, 'delete'],
+    [{ is_default: true }, 'set_default'],
+  ])('dùng thao tác database %s', async (patch, action) => {
+    await patchAddress('address-1', 'user-1', patch);
 
-    expect(await findAddressForUser(row.id, USER_A)).toBeNull();
-
-    await patchAddress(row.id, { deleted_at: new Date().toISOString() });
-    expect(await findAddressForUser(row.id, USER_B)).toBeNull();
+    expect(rpc).toHaveBeenCalledWith('manage_user_address', {
+      p_action: action,
+      p_user_id: 'user-1',
+      p_address_id: 'address-1',
+      p_data: patch,
+    });
   });
 });

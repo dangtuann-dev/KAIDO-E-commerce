@@ -17,7 +17,6 @@ import {
   findAddressForUser,
   insertAddress,
   patchAddress,
-  clearOtherDefaults,
 } from './repository.js';
 
 const BCRYPT_ROUNDS = 12;
@@ -291,9 +290,7 @@ export async function createAddress({ userId, body }) {
   }
 
   const makeDefault = existing.length === 0 || input.is_default === true;
-  const row = await insertAddress({ user_id: userId, ...toRow(input), is_default: makeDefault });
-  if (makeDefault) await clearOtherDefaults(userId, row.id);
-  return row;
+  return insertAddress({ user_id: userId, ...toRow(input), is_default: makeDefault });
 }
 
 /** M01-F04 — Sửa địa chỉ thuộc chủ tài khoản (BR-M01-04). */
@@ -307,9 +304,7 @@ export async function updateAddress({ userId, id, body }) {
   }
 
   const isDefault = current.is_default || input.is_default === true;
-  const updated = await patchAddress(id, { ...toRow(input), is_default: isDefault });
-  if (isDefault) await clearOtherDefaults(userId, id);
-  return updated;
+  return patchAddress(id, userId, { ...toRow(input), is_default: isDefault });
 }
 
 /** M01-F04 — Xóa mềm; không xóa địa chỉ mặc định khi còn địa chỉ khác (khớp trigger trong schema). */
@@ -324,7 +319,7 @@ export async function deleteAddress({ userId, id }) {
     }
   }
 
-  await patchAddress(id, { deleted_at: new Date().toISOString(), is_default: false });
+  await patchAddress(id, userId, { deleted_at: new Date().toISOString(), is_default: false });
   return { success: true };
 }
 
@@ -333,8 +328,7 @@ export async function setDefaultAddress({ userId, id }) {
   const current = await findAddressForUser(id, userId);
   if (!current) throw fail(404, 'NOT_FOUND', 'Không tìm thấy địa chỉ.');
 
-  await clearOtherDefaults(userId, id);
-  return patchAddress(id, { is_default: true });
+  return patchAddress(id, userId, { is_default: true });
 }
 
 /**
