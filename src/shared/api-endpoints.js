@@ -171,6 +171,21 @@ const endpoints = [
     status: 'NOT_IMPLEMENTED',
   },
 
+    {
+    code: 'API-M01-12',
+    module: 'M01',
+    name: 'Đổi mật khẩu',
+    method: 'PUT',
+    path: '/api/v1/user/password',
+    access: 'auth',
+    roles: [],
+    operation: 'changePassword',
+    summary: 'Đổi mật khẩu sau khi xác minh mật khẩu hiện tại (M01-F03, BR-M01-02).',
+    input: '{ current_password, new_password }',
+    output: '{ success: true }',
+    status: 'NOT_IMPLEMENTED',
+  },
+  
   // ===== TOY-M02: Sản phẩm và danh mục =====
   {
     code: 'API-M02-01',

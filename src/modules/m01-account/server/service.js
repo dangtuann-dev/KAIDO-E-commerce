@@ -82,6 +82,16 @@ function toRow(input) {
   };
 }
 
+const changePasswordSchema = z.object({
+  current_password: z.string().min(1, 'Vui lòng nhập mật khẩu hiện tại.'),
+  new_password: z
+    .string()
+    .min(8, 'Mật khẩu mới tối thiểu 8 ký tự.')
+    .regex(/[A-Z]/, 'Mật khẩu mới cần ít nhất một chữ hoa.')
+    .regex(/[a-z]/, 'Mật khẩu mới cần ít nhất một chữ thường.')
+    .regex(/[0-9]/, 'Mật khẩu mới cần ít nhất một chữ số.'),
+});
+
 /**
  * M01-F01 — Tạo tài khoản CUSTOMER (BR-M01-01, BR-M01-03).
  */
@@ -253,8 +263,53 @@ export async function updateProfile({ userId, body }) {
 /**
  * TODO(M01-F03) — Đổi mật khẩu sau khi xác minh mật khẩu hiện tại.
  */
-export async function changePassword() {
-  throw new NotImplementedError('M01-F03');
+/**
+ * TODO(M01-F03) — Đổi mật khẩu sau khi xác minh mật khẩu hiện tại.
+ */
+/**
+ * M01-F03 — Đổi mật khẩu sau khi xác minh mật khẩu hiện tại.
+ */
+export async function changePassword({ userId, body }) {
+  const parsed = changePasswordSchema.safeParse(body);
+  if (!parsed.success) {
+    const first = parsed.error.issues[0];
+    throw Object.assign(new Error(first.message), {
+      status: 422,
+      code: 'VALIDATION_ERROR',
+      field: first.path[0],
+    });
+  }
+  const { current_password, new_password } = parsed.data;
+
+  const user = await findUserById(userId);
+  if (!user) {
+    throw Object.assign(new Error('Không tìm thấy người dùng.'), {
+      status: 404,
+      code: 'NOT_FOUND',
+    });
+  }
+
+  const currentOk = await bcrypt.compare(current_password, user.password_hash ?? '');
+  if (!currentOk) {
+    throw Object.assign(new Error('Mật khẩu hiện tại không đúng.'), {
+      status: 422,
+      code: 'WRONG_PASSWORD',
+      field: 'current_password',
+    });
+  }
+
+  if (current_password === new_password) {
+    throw Object.assign(new Error('Mật khẩu mới phải khác mật khẩu hiện tại.'), {
+      status: 422,
+      code: 'SAME_PASSWORD',
+      field: 'new_password',
+    });
+  }
+
+  const passwordHash = await bcrypt.hash(new_password, BCRYPT_ROUNDS);
+  await updateUser(userId, { password_hash: passwordHash });
+
+  return { success: true };
 }
 
 /**

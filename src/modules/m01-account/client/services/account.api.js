@@ -96,3 +96,12 @@ export function listAdminUsers({ query = {} } = {}) {
   const endpoint = getApiEndpoint('API-M01-07');
   return api.get(endpoint.path, { query });
 }
+
+/**
+ * API-M01-12 — Đổi mật khẩu
+ * PUT /api/v1/user/password · quyền: đăng nhập
+ */
+export function changePassword({ body } = {}) {
+  const endpoint = getApiEndpoint('API-M01-12');
+  return api.put(endpoint.path, body);
+}

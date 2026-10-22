@@ -1,7 +1,7 @@
 import 'server-only';
 import { notImplementedHandler } from '@/server/http/handlers.js';
 import { REFRESH_TOKEN_COOKIE } from '@/shared/constants/auth.js';
-import { registerAccount, login, getProfile, updateProfile } from './service.js';
+import { registerAccount, login, getProfile, updateProfile, changePassword } from './service.js';
 import {
   listAddresses,
   createAddress,
@@ -47,6 +47,9 @@ const deleteAddressHandler = async ({ auth, params }) =>
 const setDefaultAddressHandler = async ({ auth, params }) =>
   setDefaultAddress({ userId: auth.userId, id: params.id });
 
+const changePasswordHandler = async ({ auth, body }) =>
+  changePassword({ userId: auth.userId, body });
+
 export const handlers = Object.freeze({
   'API-M01-01': registerHandler,
   'API-M01-02': loginHandler,
@@ -59,4 +62,5 @@ export const handlers = Object.freeze({
   'API-M01-09': updateAddressHandler,
   'API-M01-10': deleteAddressHandler,
   'API-M01-11': setDefaultAddressHandler,
+  'API-M01-12': changePasswordHandler,
 });
