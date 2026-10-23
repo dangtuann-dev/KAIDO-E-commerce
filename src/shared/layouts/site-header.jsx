@@ -7,7 +7,7 @@ import { BUSINESS_RULES } from '@/shared/constants/business-rules.js';
 import { formatVND } from '@/shared/utils/formatVND.js';
 import { cn } from '@/shared/utils/cn.js';
 import { useAuthStore, selectAuthUser } from '@/shared/auth/auth-store.js';
-import { AuthModal } from '@/modules/m01-account/public.client.js';
+import { AuthModal, LogoutButton } from '@/modules/m01-account/public.client.js';
 import { MegaMenuCategory } from '@/modules/m02-catalog/public.client.js';
 import { SearchBar } from '@/modules/m03-search/public.client.js';
 import { CartBadge, MiniCartDrawer } from '@/modules/m04-cart/public.client.js';
@@ -222,6 +222,11 @@ export default function SiteHeader() {
                         </button>
                       )}
                     </li>
+                    {user ? (
+                      <li>
+                        <LogoutButton className="px-3" />
+                      </li>
+                    ) : null}
                   </ul>
                 </nav>
               </div>

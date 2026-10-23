@@ -379,3 +379,11 @@ export async function updateUserRole() {
 export async function updateUserStatus() {
   throw new NotImplementedError('M01-F07');
 }
+
+/**
+ * M01-F02 — Đăng xuất. Cookie được xóa ở handler; thu hồi refresh token
+ * phía database sẽ làm khi có bảng refresh_tokens.
+ */
+export async function logout() {
+  return { success: true };
+}
