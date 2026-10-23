@@ -113,8 +113,7 @@ const endpoints = [
     output: '{ total, users: [UserInfo] }',
     status: 'NOT_IMPLEMENTED',
   },
-
-    {
+  {
     code: 'API-M01-08',
     module: 'M01',
     name: 'Thêm địa chỉ',
@@ -155,7 +154,7 @@ const endpoints = [
     input: 'id',
     output: '{ success: true }',
     status: 'NOT_IMPLEMENTED',
-  },
+  },  
   {
     code: 'API-M01-11',
     module: 'M01',
@@ -170,8 +169,7 @@ const endpoints = [
     output: '{ id, is_default: true }',
     status: 'NOT_IMPLEMENTED',
   },
-
-    {
+  {
     code: 'API-M01-12',
     module: 'M01',
     name: 'Đổi mật khẩu',
@@ -182,6 +180,20 @@ const endpoints = [
     operation: 'changePassword',
     summary: 'Đổi mật khẩu sau khi xác minh mật khẩu hiện tại (M01-F03, BR-M01-02).',
     input: '{ current_password, new_password }',
+    output: '{ success: true }',
+    status: 'NOT_IMPLEMENTED',
+  },
+  {
+    code: 'API-M01-13',
+    module: 'M01',
+    name: 'Đăng xuất',
+    method: 'POST',
+    path: '/api/v1/auth/logout',
+    access: 'optional',
+    roles: [],
+    operation: 'logout',
+    summary: 'Xóa cookie refresh token của phiên hiện tại (M01-F02).',
+    input: 'Không',
     output: '{ success: true }',
     status: 'NOT_IMPLEMENTED',
   },
