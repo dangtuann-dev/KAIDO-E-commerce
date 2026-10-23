@@ -105,3 +105,12 @@ export function changePassword({ body } = {}) {
   const endpoint = getApiEndpoint('API-M01-12');
   return api.put(endpoint.path, body);
 }
+
+/**
+ * API-M01-13 — Đăng xuất
+ * POST /api/v1/auth/logout · quyền: công khai (tùy chọn)
+ */
+export function logout() {
+  const endpoint = getApiEndpoint('API-M01-13');
+  return api.post(endpoint.path);
+}

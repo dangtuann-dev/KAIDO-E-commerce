@@ -1,12 +1,12 @@
 import 'server-only';
 import { notImplementedHandler } from '@/server/http/handlers.js';
 import { REFRESH_TOKEN_COOKIE } from '@/shared/constants/auth.js';
-import { registerAccount, login, getProfile, updateProfile, changePassword } from './service.js';
-import {
-  listAddresses,
-  createAddress,
-  updateAddress,
-  deleteAddress,
+import { registerAccount, login, getProfile, updateProfile, changePassword, logout } from './service.js';
+import { 
+  listAddresses, 
+  createAddress, 
+  updateAddress, 
+  deleteAddress, 
   setDefaultAddress,
 } from './service.js';
 
@@ -24,6 +24,22 @@ const loginHandler = async ({ body }) => {
   response.headers.append(
     'Set-Cookie',
     `${REFRESH_TOKEN_COOKIE}=${refresh_token}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${refresh_expires_in}${secure}`,
+  );
+  return response;
+};
+
+const logoutHandler = async () => {
+  await logout();
+
+  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+  const response = new Response(JSON.stringify({ success: true, data: { success: true } }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  });
+  // Max-Age=0 làm trình duyệt xóa cookie; Path và tên phải giống lúc đăng nhập
+  response.headers.append(
+    'Set-Cookie',
+    `${REFRESH_TOKEN_COOKIE}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0${secure}`,
   );
   return response;
 };
@@ -63,4 +79,5 @@ export const handlers = Object.freeze({
   'API-M01-10': deleteAddressHandler,
   'API-M01-11': setDefaultAddressHandler,
   'API-M01-12': changePasswordHandler,
+  'API-M01-13': logoutHandler,
 });

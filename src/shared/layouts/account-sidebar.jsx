@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { selectAuthUser, useAuthStore } from '@/shared/auth/auth-store.js';
 import { ROLE_LABELS } from '@/shared/constants/roles.js';
 import { cn } from '@/shared/utils/cn.js';
+import { LogoutButton } from '@/modules/m01-account/public.client.js';
 
 const ACCOUNT_LINKS = [
   { href: '/account/profile', label: 'Hồ sơ cá nhân' },
@@ -59,6 +60,10 @@ export default function AccountSidebar() {
           })}
         </ul>
       </nav>
+
+      <div className="mt-4 border-t border-fog pt-4">
+        <LogoutButton className="w-full rounded-sm border border-transparent px-3 text-left transition-colors duration-250 hover:bg-fog/60" />
+      </div>
     </aside>
   );
 }
