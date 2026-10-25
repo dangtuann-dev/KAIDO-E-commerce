@@ -45,3 +45,6 @@ yarn-error.log*
 # tài liệu nội bộ — giữ trên máy, không theo dõi bằng Git
 docs/
 /*.docx
+
+# dữ liệu sản phẩm thô (ảnh + mô tả) — giữ local, không push lên GitHub
+Product Data/

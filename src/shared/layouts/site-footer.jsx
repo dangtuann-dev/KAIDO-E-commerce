@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 
 const COLUMNS = [
   {
@@ -42,18 +43,16 @@ export default function SiteFooter() {
           <div>
             <Link
               href="/"
-              className="inline-flex items-center gap-2"
+              className="inline-flex items-center"
               aria-label="KAIDO — về trang chủ"
             >
-              <span
-                aria-hidden="true"
-                className="grid h-10 w-10 place-items-center rounded-sm bg-primary font-heading text-h5 text-white"
-              >
-                K
-              </span>
-              <span className="font-heading text-h3 tracking-wide text-ink">
-                KAIDO<span className="text-secondary">.</span>
-              </span>
+              <Image
+                src="/brand/logo-kaido.png"
+                alt="KAIDO"
+                width={320}
+                height={320}
+                className="h-24 w-24"
+              />
             </Link>
             <p className="mt-3 max-w-xs text-body-s text-slate">
               Đồ chơi trẻ em được tuyển chọn — đồng hành cùng bé trên mỗi chặng đường khám phá.

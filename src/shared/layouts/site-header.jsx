@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useCallback, useState } from 'react';
 import { BUSINESS_RULES } from '@/shared/constants/business-rules.js';
@@ -117,18 +118,17 @@ export default function SiteHeader() {
 
             <Link
               href="/"
-              className="flex shrink-0 items-center gap-2"
+              className="flex shrink-0 items-center"
               aria-label="KAIDO — về trang chủ"
             >
-              <span
-                aria-hidden="true"
-                className="grid h-10 w-10 place-items-center rounded-sm bg-primary font-heading text-h5 text-white"
-              >
-                K
-              </span>
-              <span className="font-heading text-h3 tracking-wide text-ink">
-                KAIDO<span className="text-secondary">.</span>
-              </span>
+              <Image
+                src="/brand/logo-kaido-horizontal.png"
+                alt="KAIDO"
+                width={261}
+                height={80}
+                priority
+                className="h-10 w-auto md:h-11"
+              />
             </Link>
 
             <nav aria-label="Điều hướng chính" className="ml-3 hidden items-center lg:flex">
