@@ -5,6 +5,7 @@
  * UI: Nhãn tồn kho: Còn hàng, Sắp hết, Hết hàng; ngưỡng mặc định 5.
  */
 import { BUSINESS_RULES } from '@/shared/constants/business-rules.js';
+import { cn } from '@/shared/utils/cn.js';
 import Badge from '@/shared/ui/badge.jsx';
 
 export default function StockLevelBadge({

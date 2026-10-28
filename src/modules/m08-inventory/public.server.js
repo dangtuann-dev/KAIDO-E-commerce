@@ -1,6 +1,6 @@
 import 'server-only';
-import { NotImplementedError } from '@/server/http/errors.js';
 import { listStocksBySkus } from './server/repository.js';
+import { fulfillStock, releaseStock, reserveStock } from './server/service.js';
 
 /**
  * [SERVER] Hợp đồng công khai của M08 cho module khác.
@@ -31,24 +31,25 @@ export async function checkAvailability(skus) {
 
 /**
  * M08-F05 — Giữ tồn nguyên tử khi đặt hàng.
- * TODO: gọi service/repository tương ứng khi triển khai.
+ * @param {string} orderRef
+ * @param {Array<{ sku: string, quantity: number }>} items
  */
-export async function reserveForOrder(_orderRef, _items) {
-  throw new NotImplementedError('M08-F05');
+export async function reserveForOrder(orderRef, items) {
+  return reserveStock({ order_ref: orderRef, items });
 }
 
 /**
  * M08-F07 — Giải phóng tồn khi hủy/timeout.
- * TODO: gọi service/repository tương ứng khi triển khai.
+ * @param {string} orderRef
  */
-export async function releaseForOrder(_orderRef) {
-  throw new NotImplementedError('M08-F07');
+export async function releaseForOrder(orderRef) {
+  return releaseStock({ order_ref: orderRef });
 }
 
 /**
  * M08-F06 — Xuất kho khi tạo vận đơn.
- * TODO: gọi service/repository tương ứng khi triển khai.
+ * @param {string} orderRef
  */
-export async function fulfillForOrder(_orderRef) {
-  throw new NotImplementedError('M08-F06');
+export async function fulfillForOrder(orderRef) {
+  return fulfillStock({ order_ref: orderRef });
 }
