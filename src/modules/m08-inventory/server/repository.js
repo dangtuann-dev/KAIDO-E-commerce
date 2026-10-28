@@ -1,5 +1,6 @@
 import 'server-only';
-import { NotImplementedError } from '@/server/http/errors.js';
+import { getSupabaseAdmin } from '@/server/db/supabase.js';
+import { fromSupabaseError, NotImplementedError } from '@/server/http/errors.js';
 
 /** Bảng M08 sở hữu (xem README để biết quy ước dùng chung). */
 export const OWNED_TABLES = Object.freeze([
@@ -77,10 +78,18 @@ export async function findStockBySku(_sku, _warehouseId) {
 }
 
 /**
- * TODO(M08-F04) — bảng `inventory_stocks`.
+ * M08-F04 — bảng `inventory_stocks`, gộp tồn khả dụng theo SKU trên mọi kho.
  */
-export async function listStocksBySkus(_skus) {
-  throw new NotImplementedError('M08-F04');
+export async function listStocksBySkus(skus) {
+  if (!Array.isArray(skus) || skus.length === 0) return [];
+
+  const { data, error } = await getSupabaseAdmin()
+    .from('inventory_stocks')
+    .select('variant_id,on_hand,reserved,available,product_variants!inner(sku)')
+    .in('product_variants.sku', skus);
+
+  if (error) throw fromSupabaseError(error);
+  return data ?? [];
 }
 
 /**

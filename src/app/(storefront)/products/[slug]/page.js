@@ -1,5 +1,9 @@
-export { default } from '@/modules/m02-catalog/client/pages/ProductDetailPage.jsx';
+import ProductDetailPage, {
+  generateMetadata as buildProductMetadata,
+} from '@/modules/m02-catalog/client/pages/ProductDetailPage.jsx';
 
-export const metadata = {
-  title: 'Chi tiết sản phẩm',
-};
+export const dynamic = 'force-dynamic';
+
+export const generateMetadata = buildProductMetadata;
+
+export default ProductDetailPage;
