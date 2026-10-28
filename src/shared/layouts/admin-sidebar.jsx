@@ -9,7 +9,16 @@ import { cn } from '@/shared/utils/cn.js';
 
 const MODULE_NAV = [
   { module: 'M01', href: '/admin/users', label: 'Người dùng' },
-  { module: 'M02', href: '/admin/products', label: 'Sản phẩm' },
+  {
+    module: 'M02',
+    href: '/admin/products',
+    label: 'Sản phẩm',
+    children: [
+      { href: '/admin/products', label: 'Danh sách sản phẩm' },
+      { href: '/admin/categories', label: 'Danh mục' },
+      { href: '/admin/brands', label: 'Thương hiệu' },
+    ],
+  },
   { module: 'M05', href: '/admin/orders', label: 'Đơn hàng' },
   { module: 'M06', href: '/admin/shipping', label: 'Giao vận' },
   {

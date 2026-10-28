@@ -1,5 +1,9 @@
-export { default } from '@/modules/m03-search/client/pages/CategoryPage.jsx';
+import CategoryPage, {
+  generateMetadata as buildCategoryMetadata,
+} from '@/modules/m02-catalog/client/pages/CategoryPage.jsx';
 
-export const metadata = {
-  title: 'Danh mục sản phẩm',
-};
+export const dynamic = 'force-dynamic';
+
+export const generateMetadata = buildCategoryMetadata;
+
+export default CategoryPage;
