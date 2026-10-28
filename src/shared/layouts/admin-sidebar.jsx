@@ -26,9 +26,11 @@ const MODULE_NAV = [
     href: '/admin/inventory',
     label: 'Kho & tồn kho',
     children: [
+      { href: '/admin/inventory', label: 'Tổng quan kho' },
       { href: '/admin/inventory/receipts/new', label: 'Phiếu nhập kho' },
       { href: '/admin/inventory/audit', label: 'Kiểm kê' },
       { href: '/admin/inventory/stock-cards', label: 'Thẻ kho' },
+      { href: '/admin/inventory/settings', label: 'Cấu hình kho & NCC' },
     ],
   },
   { module: 'M07', href: '/admin/loyalty/vouchers', label: 'Voucher & khách thân thiết' },
