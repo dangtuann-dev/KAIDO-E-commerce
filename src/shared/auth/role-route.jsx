@@ -5,6 +5,7 @@ import { selectAuthStatus, selectAuthUser, useAuthStore } from '@/shared/auth/au
 import ProtectedRoute from '@/shared/auth/protected-route.jsx';
 import { ROLE_LABELS, hasRole } from '@/shared/constants/roles.js';
 import EmptyState from '@/shared/ui/empty-state.jsx';
+import Spinner from '@/shared/ui/spinner.jsx';
 
 /**
  * [SHARED] RoleRoute — kiểm tra vai trò phía client (ma trận RBAC SRS §2.2).
@@ -13,6 +14,14 @@ import EmptyState from '@/shared/ui/empty-state.jsx';
 export default function RoleRoute({ roles = [], children }) {
   const status = useAuthStore(selectAuthStatus);
   const user = useAuthStore(selectAuthUser);
+
+  if (status === 'loading') {
+    return (
+      <div className="kaido-container flex min-h-[40vh] items-center justify-center py-16">
+        <Spinner size="lg" label="Đang kiểm tra phiên đăng nhập…" className="text-primary" />
+      </div>
+    );
+  }
 
   if (status !== 'authenticated') {
     return <ProtectedRoute>{null}</ProtectedRoute>;
