@@ -9,6 +9,7 @@
 import Link from 'next/link';
 import Badge from '@/shared/ui/badge.jsx';
 import ModuleStub from '@/shared/ui/module-stub.jsx';
+import { FeaturedProductShelf } from '@/modules/m02-catalog/public.client.js';
 
 const DEMO_CATEGORIES = [
   { href: '/category/bo-lap-rap', label: 'Bộ lắp ráp', tone: 'bg-surface-sky' },
@@ -119,21 +120,8 @@ export default function HomePage() {
         />
       </section>
 
-      <section className="kaido-container py-8">
-        <ModuleStub
-          headingLevel="h2"
-          moduleCode="TOY-M02"
-          moduleName="Sản phẩm và danh mục"
-          componentName="FeaturedProductShelf"
-          route="/"
-          srsRefs={['M02-F10', 'M02-F11', 'M03-F01', 'API-M02-02']}
-          todos={[
-            'Dựng ProductCard tái sử dụng (ảnh, giá, nhãn hết hàng).',
-            'Nối dữ liệu sản phẩm nổi bật qua API-M02-02/M03-01.',
-            'Xử lý skeleton và trạng thái lỗi bằng TanStack Query.',
-          ]}
-          description="Khu sản phẩm nổi bật sẽ lấy dữ liệu từ M02/M03; chưa có nghiệp vụ trong bản nền tảng."
-        />
+      <section className="bg-white">
+        <FeaturedProductShelf />
       </section>
 
       <section className="border-y border-fog bg-white">

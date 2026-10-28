@@ -1,17 +1,43 @@
 import 'server-only';
-import { notImplementedHandler } from '@/server/http/handlers.js';
+import {
+  getCategoryTree,
+  listAdminCategories,
+  createCategory,
+  updateCategory,
+  deleteCategory,
+  listBrands,
+  listAdminBrands,
+  createBrand,
+  updateBrand,
+  deleteBrand,
+  createProduct,
+  updateProduct,
+  softDeleteProduct,
+  listProducts,
+  listAdminProducts,
+  getProductDetail,
+  getAdminProductDetail,
+  getCatalogDelta,
+} from './service.js';
 
-/**
- * [SERVER] M02 — handler map theo registry API.
- * Giai đoạn nền tảng: mọi handler trả 501 NOT_IMPLEMENTED kèm mã API.
- * TODO: thay từng handler bằng service tương ứng khi triển khai nghiệp vụ.
- */
+/** [SERVER] M02 — handler map theo registry API. */
 export const handlers = Object.freeze({
-  'API-M02-01': notImplementedHandler('API-M02-01'), // M02-F01
-  'API-M02-02': notImplementedHandler('API-M02-02'), // M02-F10
-  'API-M02-03': notImplementedHandler('API-M02-03'), // M02-F11
-  'API-M02-04': notImplementedHandler('API-M02-04'), // M02-F04
-  'API-M02-05': notImplementedHandler('API-M02-05'), // M02-F05
-  'API-M02-06': notImplementedHandler('API-M02-06'), // M02-F06
-  'API-M02-07': notImplementedHandler('API-M02-07'), // M02-F12
+  'API-M02-01': async () => getCategoryTree(),
+  'API-M02-02': async ({ query }) => listProducts({ query }),
+  'API-M02-03': async ({ params }) => getProductDetail({ idOrSlug: params.idOrSlug }),
+  'API-M02-04': async ({ body }) => createProduct({ body }),
+  'API-M02-05': async ({ params, body }) => updateProduct({ id: params.id, body }),
+  'API-M02-06': async ({ params }) => softDeleteProduct({ id: params.id }),
+  'API-M02-07': async ({ query }) => getCatalogDelta(query),
+  'API-M02-08': async ({ query }) => listAdminProducts({ query }),
+  'API-M02-09': async ({ params }) => getAdminProductDetail({ id: params.id }),
+  'API-M02-10': async () => listBrands(),
+  'API-M02-11': async () => listAdminCategories(),
+  'API-M02-12': async ({ body }) => createCategory({ body }),
+  'API-M02-13': async ({ params, body }) => updateCategory({ id: params.id, body }),
+  'API-M02-14': async ({ params }) => deleteCategory({ id: params.id }),
+  'API-M02-15': async () => listAdminBrands(),
+  'API-M02-16': async ({ body }) => createBrand({ body }),
+  'API-M02-17': async ({ params, body }) => updateBrand({ id: params.id, body }),
+  'API-M02-18': async ({ params }) => deleteBrand({ id: params.id }),
 });

@@ -1,23 +1,27 @@
 /**
  * [TOY-M02] Sản phẩm và danh mục — AgeBadge
- * SRS: M02-F10, M02-F11
- * Route: ProductCard, /products/[slug]
- * UI: Nhãn độ tuổi từ trường age_group, màu theo nhóm tuổi.
+ * SRS: M02-F05, M02-F10 | API: API-M02-02, API-M02-03
+ * Route: ProductCard, /products/[slug], trang danh mục
+ * UI: Nhãn độ tuổi từ trường age_group (giá trị DB: 0-12M, 1-3Y, ...).
  */
+import { AGE_GROUP_LABELS } from '@/shared/constants/product.js';
 import { cn } from '@/shared/utils/cn.js';
 
-const AGE_GROUPS = {
-  '0-12m': { label: '0–12 tháng', tone: 'bg-surface-blush text-secondary' },
-  '1-3y': { label: '1–3 tuổi', tone: 'bg-accent/30 text-ink' },
-  '3-6y': { label: '3–6 tuổi', tone: 'bg-surface-sky text-primary-active' },
-  '6-12y': { label: '6–12 tuổi', tone: 'bg-surface-mint text-success-strong' },
-  '12y+': { label: '12+ tuổi', tone: 'bg-secondary/10 text-secondary' },
+const AGE_TONES = {
+  '0-12M': 'bg-surface-blush text-secondary',
+  '1-3Y': 'bg-accent/30 text-ink',
+  '3-6Y': 'bg-surface-sky text-primary-active',
+  '6-12Y': 'bg-surface-mint text-success-strong',
+  '12Y_PLUS': 'bg-secondary/10 text-secondary',
 };
 
 function resolveAgeGroup(value) {
-  if (!value) return null;
-  const key = String(value).trim();
-  return AGE_GROUPS[key] ?? { label: key, tone: 'bg-fog text-ink' };
+  const key = String(value ?? '').trim();
+  if (!key) return null;
+  return {
+    label: AGE_GROUP_LABELS[key] ?? key,
+    tone: AGE_TONES[key] ?? 'bg-fog text-ink',
+  };
 }
 
 export default function AgeBadge({ ageGroup, className }) {
@@ -28,6 +32,7 @@ export default function AgeBadge({ ageGroup, className }) {
     <span className="inline-flex flex-wrap gap-1">
       {groups.map((value) => {
         const group = resolveAgeGroup(value);
+        if (!group) return null;
         return (
           <span
             key={String(value)}
