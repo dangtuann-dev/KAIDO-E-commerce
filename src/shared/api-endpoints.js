@@ -123,7 +123,8 @@ const endpoints = [
     roles: [],
     operation: 'createAddress',
     summary: 'Thêm địa chỉ; tối đa 10 địa chỉ, địa chỉ đầu tiên tự là mặc định (M01-F04).',
-    input: '{ recipient_name, phone, province_name, district_name?, ward_name, street_address, is_default? }',
+    input:
+      '{ recipient_name, phone, province_name, district_name?, ward_name, street_address, is_default? }',
     output: '{ id, recipient_name, ..., is_default }',
     status: 'NOT_IMPLEMENTED',
   },
@@ -137,7 +138,8 @@ const endpoints = [
     roles: [],
     operation: 'updateAddress',
     summary: 'Sửa địa chỉ thuộc chủ tài khoản (M01-F04).',
-    input: '{ recipient_name, phone, province_name, district_name?, ward_name, street_address, is_default? }',
+    input:
+      '{ recipient_name, phone, province_name, district_name?, ward_name, street_address, is_default? }',
     output: '{ id, ..., is_default }',
     status: 'NOT_IMPLEMENTED',
   },
@@ -154,7 +156,7 @@ const endpoints = [
     input: 'id',
     output: '{ success: true }',
     status: 'NOT_IMPLEMENTED',
-  },  
+  },
   {
     code: 'API-M01-11',
     module: 'M01',
@@ -197,7 +199,23 @@ const endpoints = [
     output: '{ success: true }',
     status: 'NOT_IMPLEMENTED',
   },
-  
+  {
+    code: 'API-M01-14',
+    module: 'M01',
+    name: 'Làm mới phiên đăng nhập',
+    method: 'POST',
+    path: '/api/v1/auth/refresh',
+    access: 'public',
+    roles: [],
+    rateLimit: 'auth',
+    operation: 'refreshSession',
+    summary:
+      'Đọc cookie refresh token, cấp lại access token 15 phút và vai trò hiện tại từ DB (M01-F02).',
+    input: 'Không (cookie refresh_token)',
+    output: '{ access_token, expires_in, user_info } + Set-Cookie refresh_token',
+    status: 'IMPLEMENTED',
+  },
+
   // ===== TOY-M02: Sản phẩm và danh mục =====
   // API-M02-08..18 bổ sung cho M02-F02/F03/F05 (quản trị danh mục, thương hiệu và
   // danh sách sản phẩm trong back-office) — SRS chưa liệt kê, xem README M02 §3.
@@ -1211,7 +1229,7 @@ const endpoints = [
     roles: ['ADMIN', 'WAREHOUSE_KEEPER'],
     operation: 'receiveReturnedStock',
     summary: 'Phân loại hàng nguyên vẹn/lỗi khi nhận lại từ đơn hoàn (M08-F08).',
-    input: "{ order_ref, warehouse_id, items: [{ sku, quantity, condition }], note }",
+    input: '{ order_ref, warehouse_id, items: [{ sku, quantity, condition }], note }',
     output: '{ order_ref, sellable_quantity, damaged_quantity }',
     status: 'IMPLEMENTED',
   },

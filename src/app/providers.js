@@ -2,6 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
+import SessionBootstrap from '@/shared/auth/session-bootstrap.jsx';
 import { ToastProvider } from '@/shared/ui/toast.jsx';
 
 /**
@@ -24,6 +25,7 @@ export default function Providers({ children }) {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <SessionBootstrap />
       <ToastProvider>{children}</ToastProvider>
     </QueryClientProvider>
   );

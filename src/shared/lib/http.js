@@ -10,9 +10,7 @@ import { GUEST_SESSION_HEADER, REQUEST_ID_HEADER } from '@/shared/constants/auth
 const API_PREFIX = '/api/v1';
 
 /**
- * SRS M01-F02 cấp refresh token qua cookie nhưng bảng API chưa liệt kê endpoint
- * refresh. Client dùng đường dẫn dưới đây; cần bổ sung route ở M01 (OPEN_DECISIONS).
- * TODO(M01-F02): triển khai POST /api/v1/auth/refresh (đọc cookie, xoay token).
+ * POST /api/v1/auth/refresh (API-M01-14) đọc cookie refresh token và xoay token.
  */
 export const REFRESH_ENDPOINT = '/api/v1/auth/refresh';
 

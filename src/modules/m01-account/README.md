@@ -35,6 +35,7 @@ Tổng: **7 FR** theo SRS (không đổi mã SRS).
 | `API-M01-05` | GET    | `/api/v1/user/addresses`       | auth   |
 | `API-M01-06` | POST   | `/api/v1/auth/forgot-password` | public |
 | `API-M01-07` | GET    | `/api/v1/admin/users`          | role   |
+| `API-M01-14` | POST   | `/api/v1/auth/refresh`         | public |
 
 Registry đầy đủ tại `src/shared/api-endpoints.js`; route được sinh bởi `npm run gen:routes`.
 

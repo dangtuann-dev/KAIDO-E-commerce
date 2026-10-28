@@ -1,12 +1,26 @@
 import 'server-only';
 import { notImplementedHandler } from '@/server/http/handlers.js';
 import { REFRESH_TOKEN_COOKIE } from '@/shared/constants/auth.js';
-import { registerAccount, login, getProfile, updateProfile, changePassword, logout } from './service.js';
-import { 
-  listAddresses, 
-  createAddress, 
-  updateAddress, 
-  deleteAddress, 
+import {
+  getRefreshTokenFromRequest,
+  attachRefreshTokenCookie,
+  clearRefreshTokenCookie,
+} from '@/server/auth/cookies.js';
+import { errorResponse, successResponse } from '@/server/http/apiResponse.js';
+import {
+  registerAccount,
+  login,
+  refreshSession,
+  getProfile,
+  updateProfile,
+  changePassword,
+  logout,
+} from './service.js';
+import {
+  listAddresses,
+  createAddress,
+  updateAddress,
+  deleteAddress,
   setDefaultAddress,
 } from './service.js';
 
@@ -28,6 +42,21 @@ const loginHandler = async ({ body }) => {
   return response;
 };
 
+const refreshHandler = async ({ request, requestId }) => {
+  try {
+    const { refresh_token, refresh_expires_in, ...publicData } = await refreshSession({
+      refreshToken: getRefreshTokenFromRequest(request),
+    });
+
+    return attachRefreshTokenCookie(successResponse(publicData, { requestId }), refresh_token, {
+      maxAgeSeconds: refresh_expires_in,
+    });
+  } catch (error) {
+    // Cookie hỏng/hết hạn: xóa luôn để lần tải trang sau không gọi refresh lặp lại.
+    return clearRefreshTokenCookie(errorResponse(error, { requestId }));
+  }
+};
+
 const logoutHandler = async () => {
   await logout();
 
@@ -46,13 +75,11 @@ const logoutHandler = async () => {
 
 const profileHandler = async ({ auth }) => getProfile({ userId: auth.userId });
 
-const updateProfileHandler = async ({ auth, body }) =>
-  updateProfile({ userId: auth.userId, body });
+const updateProfileHandler = async ({ auth, body }) => updateProfile({ userId: auth.userId, body });
 
 const listAddressesHandler = async ({ auth }) => listAddresses({ userId: auth.userId });
 
-const createAddressHandler = async ({ auth, body }) =>
-  createAddress({ userId: auth.userId, body });
+const createAddressHandler = async ({ auth, body }) => createAddress({ userId: auth.userId, body });
 
 const updateAddressHandler = async ({ auth, params, body }) =>
   updateAddress({ userId: auth.userId, id: params.id, body });
@@ -80,4 +107,5 @@ export const handlers = Object.freeze({
   'API-M01-11': setDefaultAddressHandler,
   'API-M01-12': changePasswordHandler,
   'API-M01-13': logoutHandler,
+  'API-M01-14': refreshHandler,
 });

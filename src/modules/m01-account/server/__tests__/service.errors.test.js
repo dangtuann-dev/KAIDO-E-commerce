@@ -1,8 +1,9 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import bcrypt from 'bcryptjs';
 import { AppError } from '@/server/http/errors.js';
-import { login, registerAccount } from '../service.js';
-import { findUserByEmail, updateUser } from '../repository.js';
+import { signRefreshToken } from '@/server/auth/jwt.js';
+import { login, refreshSession, registerAccount } from '../service.js';
+import { findUserByEmail, findUserById, updateUser } from '../repository.js';
 
 vi.mock('../repository.js', () => ({
   findUserByEmail: vi.fn(),
@@ -87,6 +88,53 @@ describe('M01 login — mã lỗi nghiệp vụ', () => {
       USER_ID,
       expect.objectContaining({ failed_login_count: 0, locked_until: null }),
     );
+  });
+});
+
+describe('M01 refresh — khôi phục phiên', () => {
+  it('refresh token hợp lệ → trả access token và vai trò mới nhất từ DB', async () => {
+    const { token } = await signRefreshToken({ userId: USER_ID, role: 'CUSTOMER' });
+    findUserById.mockResolvedValue(fakeUser({ role: 'ADMIN' }));
+
+    const result = await refreshSession({ refreshToken: token });
+
+    expect(result.access_token).toBeTruthy();
+    expect(result.user_info).toMatchObject({ id: USER_ID, role: 'ADMIN' });
+    expect(result.user_info.password_hash).toBeUndefined();
+    expect(result.refresh_token).toBeTruthy();
+  });
+
+  it('không có token → 401 UNAUTHORIZED', async () => {
+    const error = await refreshSession({ refreshToken: null }).catch((caught) => caught);
+
+    expect(error).toBeInstanceOf(AppError);
+    expect(error).toMatchObject({ code: 'UNAUTHORIZED', status: 401 });
+  });
+
+  it('token không hợp lệ → 401 UNAUTHORIZED', async () => {
+    const error = await refreshSession({ refreshToken: 'khong-phai-jwt' }).catch(
+      (caught) => caught,
+    );
+
+    expect(error).toMatchObject({ code: 'UNAUTHORIZED', status: 401 });
+  });
+
+  it('tài khoản không còn tồn tại → 401 UNAUTHORIZED', async () => {
+    const { token } = await signRefreshToken({ userId: USER_ID, role: 'CUSTOMER' });
+    findUserById.mockResolvedValue(null);
+
+    const error = await refreshSession({ refreshToken: token }).catch((caught) => caught);
+
+    expect(error).toMatchObject({ code: 'UNAUTHORIZED', status: 401 });
+  });
+
+  it('tài khoản bị vô hiệu hóa → 403 ACCOUNT_DISABLED', async () => {
+    const { token } = await signRefreshToken({ userId: USER_ID, role: 'CUSTOMER' });
+    findUserById.mockResolvedValue(fakeUser({ status: 'DISABLED' }));
+
+    const error = await refreshSession({ refreshToken: token }).catch((caught) => caught);
+
+    expect(error).toMatchObject({ code: 'ACCOUNT_DISABLED', status: 403 });
   });
 });
 

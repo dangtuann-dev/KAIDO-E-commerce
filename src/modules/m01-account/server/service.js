@@ -2,7 +2,7 @@ import bcrypt from 'bcryptjs';
 import { AppError, NotImplementedError } from '@/server/http/errors.js';
 import { BUSINESS_RULES } from '@/shared/constants/business-rules.js';
 import { ERROR_CODES } from '@/shared/constants/error-codes.js';
-import { signAccessToken, signRefreshToken } from '@/server/auth/jwt.js';
+import { signAccessToken, signRefreshToken, verifyRefreshToken } from '@/server/auth/jwt.js';
 import {
   findUserByEmail,
   findUserByPhone,
@@ -153,7 +153,7 @@ export async function login({ email, password }) {
       failed_login_count: shouldLock ? 0 : failed,
       locked_until: shouldLock
         ? new Date(now + BUSINESS_RULES.AUTH.LOCKOUT_MINUTES * 60 * 1000).toISOString()
-        : user.locked_until ?? null,
+        : (user.locked_until ?? null),
     });
 
     if (shouldLock) {
@@ -192,6 +192,51 @@ export async function login({ email, password }) {
     expires_in: expiresIn,
     user_info: safeUser,
     refresh_token: refreshToken,
+    refresh_expires_in: refreshTtl,
+  };
+}
+
+/**
+ * M01-F02 — Cấp lại access token từ cookie refresh token.
+ * Vai trò/trạng thái đọc lại từ DB để thay đổi quyền có hiệu lực ngay sau khi tải lại trang
+ * (claim `role` trong refresh token có thể đã cũ).
+ */
+export async function refreshSession({ refreshToken }) {
+  if (!refreshToken) {
+    throw new AppError(ERROR_CODES.UNAUTHORIZED);
+  }
+
+  let payload;
+  try {
+    payload = await verifyRefreshToken(refreshToken);
+  } catch {
+    throw new AppError(ERROR_CODES.UNAUTHORIZED);
+  }
+
+  const user = await findUserById(payload.userId);
+  if (!user) {
+    throw new AppError(ERROR_CODES.UNAUTHORIZED);
+  }
+  if (user.status !== 'ACTIVE') {
+    throw fail(403, ERROR_CODES.ACCOUNT_DISABLED);
+  }
+
+  const { token: accessToken, expiresIn } = await signAccessToken({
+    userId: user.id,
+    role: user.role,
+    email: user.email,
+  });
+  const { token: newRefreshToken, expiresIn: refreshTtl } = await signRefreshToken({
+    userId: user.id,
+    role: user.role,
+  });
+
+  const { password_hash: _omit, ...safeUser } = user;
+  return {
+    access_token: accessToken,
+    expires_in: expiresIn,
+    user_info: safeUser,
+    refresh_token: newRefreshToken,
     refresh_expires_in: refreshTtl,
   };
 }
@@ -315,7 +360,11 @@ export async function deleteAddress({ userId, id }) {
   if (current.is_default) {
     const others = (await listAddressesByUser(userId)).filter((a) => a.id !== id);
     if (others.length > 0) {
-      throw fail(422, 'DEFAULT_REQUIRED', 'Hãy chọn địa chỉ mặc định khác trước khi xóa địa chỉ này.');
+      throw fail(
+        422,
+        'DEFAULT_REQUIRED',
+        'Hãy chọn địa chỉ mặc định khác trước khi xóa địa chỉ này.',
+      );
     }
   }
 

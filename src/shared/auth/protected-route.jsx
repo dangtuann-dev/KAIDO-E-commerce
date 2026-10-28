@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { selectAuthStatus, useAuthStore } from '@/shared/auth/auth-store.js';
 import EmptyState from '@/shared/ui/empty-state.jsx';
+import Spinner from '@/shared/ui/spinner.jsx';
 
 /**
  * [SHARED] ProtectedRoute — chặn route tài khoản ở phía client.
@@ -12,6 +13,14 @@ import EmptyState from '@/shared/ui/empty-state.jsx';
 export default function ProtectedRoute({ children }) {
   const status = useAuthStore(selectAuthStatus);
   const pathname = usePathname();
+
+  if (status === 'loading') {
+    return (
+      <div className="kaido-container flex min-h-[40vh] items-center justify-center py-16">
+        <Spinner size="lg" label="Đang kiểm tra phiên đăng nhập…" className="text-primary" />
+      </div>
+    );
+  }
 
   if (status === 'authenticated') return children;
 
