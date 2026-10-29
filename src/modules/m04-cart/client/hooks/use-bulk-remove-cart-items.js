@@ -5,8 +5,8 @@ import { bulkRemoveCartItems } from '../services/cart.api.js';
 
 /**
  * API-M04-05 — Xóa nhiều sản phẩm
- * TanStack Query mutation khung cho POST /api/v1/cart/items/bulk-delete.
- * TODO(API-M04-05): bật khi backend hoàn thiện; xử lý loading/error ở UI gọi hook.
+ * TanStack Query mutation cho POST /api/v1/cart/items/bulk-delete (M04-F04).
+ * Tối đa 50 dòng mỗi lần; response trả `removed_items` để UI hoàn tác.
  */
 export function useBulkRemoveCartItems(options = {}) {
   return useMutation({

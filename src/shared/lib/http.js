@@ -58,7 +58,11 @@ function createId() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-function getGuestSessionId() {
+/**
+ * Đọc (và tạo nếu chưa có) mã phiên giỏ khách vãng lai — BR-M04-04.
+ * M04 dùng lại hàm này để biết khi nào cần gộp giỏ sau khi đăng nhập (M04-F08).
+ */
+export function getGuestSessionId() {
   if (typeof window === 'undefined') return null;
 
   try {
@@ -70,6 +74,35 @@ function getGuestSessionId() {
     return created;
   } catch {
     return null;
+  }
+}
+
+/**
+ * Chỉ đọc mã phiên giỏ khách đã có (không tạo mới).
+ * Dùng khi cần biết “khách này từng có giỏ hàng chưa” — ví dụ gộp giỏ sau đăng nhập (M04-F08).
+ */
+export function readGuestSessionId() {
+  if (typeof window === 'undefined') return null;
+
+  try {
+    const existing = window.localStorage.getItem(GUEST_SESSION_STORAGE_KEY);
+    return existing || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Xóa mã phiên giỏ khách sau khi đã gộp vào giỏ thành viên để không gộp lặp lại
+ * (M04-F08). Lần mua với tư cách khách kế tiếp sẽ nhận mã phiên mới.
+ */
+export function clearGuestSessionId() {
+  if (typeof window === 'undefined') return;
+
+  try {
+    window.localStorage.removeItem(GUEST_SESSION_STORAGE_KEY);
+  } catch {
+    // Trình duyệt chặn localStorage: bỏ qua, server vẫn chống gộp lặp bằng trạng thái MERGED.
   }
 }
 

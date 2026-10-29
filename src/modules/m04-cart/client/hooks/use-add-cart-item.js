@@ -5,8 +5,8 @@ import { addCartItem } from '../services/cart.api.js';
 
 /**
  * API-M04-02 — Thêm sản phẩm vào giỏ
- * TanStack Query mutation khung cho POST /api/v1/cart/items.
- * TODO(API-M04-02): bật khi backend hoàn thiện; xử lý loading/error ở UI gọi hook.
+ * TanStack Query mutation cho POST /api/v1/cart/items.
+ * Server chặn vượt tồn khả dụng và giới hạn 20 đơn vị/SKU (BR-M04-01, BR-M04-05).
  */
 export function useAddCartItem(options = {}) {
   return useMutation({
