@@ -610,6 +610,33 @@ export async function listProducts({ query }) {
   };
 }
 
+/**
+ * M03 read-only contract — trả toàn bộ sản phẩm ACTIVE kèm dữ liệu tìm kiếm.
+ * Chỉ đọc; M03 không ghi ngược vào bảng sản phẩm.
+ */
+export async function getSearchCatalog() {
+  const rows = await repo.listSearchCatalogRows();
+  const stockMap = await fetchStockMap(collectSkus(rows));
+
+  return rows.map((row) => {
+    const categories = categoryEntries(row)
+      .filter((entry) => entry.category.is_active)
+      .map((entry) => ({
+        id: entry.category.id,
+        name: entry.category.name,
+        slug: entry.category.slug,
+      }));
+
+    return {
+      ...mapSummary(row, stockMap),
+      description: row.description ?? null,
+      categories,
+      category_ids: categories.map((category) => category.id),
+      sku_list: activeVariants(row).map((variant) => variant.sku),
+    };
+  });
+}
+
 export async function listAdminProducts({ query }) {
   const page = query.page ?? 1;
   const limit = query.limit ?? 20;

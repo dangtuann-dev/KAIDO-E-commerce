@@ -2,7 +2,7 @@ import 'server-only';
 import { AppError } from '@/server/http/errors.js';
 import { ERROR_CODES } from '@/shared/constants/error-codes.js';
 import * as repo from './server/repository.js';
-import { getCatalogDelta as getCatalogDeltaService } from './server/service.js';
+import { getCatalogDelta as getCatalogDeltaService, getSearchCatalog as getSearchCatalogService } from './server/service.js';
 
 /**
  * [SERVER] Hợp đồng công khai của M02 cho module khác.
@@ -131,6 +131,14 @@ export async function setProductStockFlag(productId, inStock) {
   if (!product) throw notFound('Không tìm thấy sản phẩm.');
 
   return { product_id: product.id, in_stock: Boolean(inStock) };
+}
+
+/**
+ * M02-F10 — Dữ liệu catalog chỉ đọc cho M03 (BR-M03-05, BR-M03-07).
+ * Trả sản phẩm ACTIVE kèm mô tả, danh mục, SKU và trạng thái tồn kho.
+ */
+export async function getSearchCatalog() {
+  return getSearchCatalogService();
 }
 
 /**
