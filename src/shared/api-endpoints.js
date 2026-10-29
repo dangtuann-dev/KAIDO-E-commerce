@@ -491,7 +491,7 @@ const endpoints = [
     input:
       'keyword, category_id[], brand_id[], price_min, price_max, age_group[], gender, in_stock, on_sale, sort, page, limit',
     output: '{ total, page, limit, results: [Product], facets: {} }',
-    status: 'NOT_IMPLEMENTED',
+    status: 'IMPLEMENTED',
   },
   {
     code: 'API-M03-02',
@@ -506,7 +506,7 @@ const endpoints = [
     summary: 'Từ 2 ký tự, tối đa 8 gợi ý, debounce 300ms phía client (M03-F02).',
     input: 'keyword (>=2 ký tự)',
     output: '{ suggestions: [{ text, type }] }',
-    status: 'NOT_IMPLEMENTED',
+    status: 'IMPLEMENTED',
   },
   {
     code: 'API-M03-03',
@@ -520,7 +520,7 @@ const endpoints = [
     summary: 'Top từ khóa phổ biến hiển thị khi không có kết quả (M03-F12).',
     input: 'limit (tùy chọn)',
     output: '[{ keyword, count }]',
-    status: 'NOT_IMPLEMENTED',
+    status: 'IMPLEMENTED',
   },
   {
     code: 'API-M03-04',
@@ -534,7 +534,7 @@ const endpoints = [
     summary: 'Top từ khóa, từ khóa không có kết quả, tổng lượt tìm (M03-F12).',
     input: 'date_from, date_to',
     output: '{ top_keywords, zero_result_keywords, total_searches }',
-    status: 'NOT_IMPLEMENTED',
+    status: 'IMPLEMENTED',
   },
 
   // ===== TOY-M04: Giỏ hàng =====

@@ -8,8 +8,7 @@ const endpoint = getApiEndpoint('API-M03-02');
 
 /**
  * API-M03-02 — Gợi ý từ khóa
- * TanStack Query query khung cho GET /api/v1/search/autocomplete.
- * TODO(API-M03-02): bật khi backend hoàn thiện; xử lý loading/error ở UI gọi hook.
+ * TanStack Query cho GET /api/v1/search/autocomplete.
  */
 export function useAutocompleteKeyword(variables = {}, options = {}) {
   return useQuery({

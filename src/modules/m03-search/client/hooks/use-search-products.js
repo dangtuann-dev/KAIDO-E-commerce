@@ -8,8 +8,7 @@ const endpoint = getApiEndpoint('API-M03-01');
 
 /**
  * API-M03-01 — Tìm kiếm sản phẩm
- * TanStack Query query khung cho GET /api/v1/search/products.
- * TODO(API-M03-01): bật khi backend hoàn thiện; xử lý loading/error ở UI gọi hook.
+ * TanStack Query cho GET /api/v1/search/products.
  */
 export function useSearchProducts(variables = {}, options = {}) {
   return useQuery({

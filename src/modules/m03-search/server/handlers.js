@@ -1,14 +1,16 @@
 import 'server-only';
-import { notImplementedHandler } from '@/server/http/handlers.js';
+import {
+  searchProducts,
+  autocompleteKeyword,
+  getPopularKeywords,
+  getSearchStatistics,
+} from './service.js';
 
-/**
- * [SERVER] M03 — handler map theo registry API.
- * Giai đoạn nền tảng: mọi handler trả 501 NOT_IMPLEMENTED kèm mã API.
- * TODO: thay từng handler bằng service tương ứng khi triển khai nghiệp vụ.
- */
+/** [SERVER] M03 — handler map theo registry API. */
 export const handlers = Object.freeze({
-  'API-M03-01': notImplementedHandler('API-M03-01'), // M03-F01
-  'API-M03-02': notImplementedHandler('API-M03-02'), // M03-F02
-  'API-M03-03': notImplementedHandler('API-M03-03'), // M03-F12
-  'API-M03-04': notImplementedHandler('API-M03-04'), // M03-F12
+  'API-M03-01': async ({ query, auth, guestSessionId }) =>
+    searchProducts({ query, userId: auth?.userId ?? null, guestSessionId }),
+  'API-M03-02': async ({ query }) => autocompleteKeyword({ query }),
+  'API-M03-03': async ({ query }) => getPopularKeywords({ query }),
+  'API-M03-04': async ({ query }) => getSearchStatistics({ query }),
 });

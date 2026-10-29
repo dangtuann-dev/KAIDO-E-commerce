@@ -16,6 +16,7 @@ import { useAutocompleteKeyword } from '../hooks/use-autocomplete-keyword.js';
 const TYPE_LABELS = {
   product: 'Sản phẩm',
   category: 'Danh mục',
+  brand: 'Thương hiệu',
   keyword: 'Từ khóa',
 };
 

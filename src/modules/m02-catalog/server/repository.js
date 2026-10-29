@@ -66,6 +66,30 @@ const PRODUCT_DETAIL_SELECT = [
   'product_variants(id,sku,name,attributes,image_url,is_default,is_active,sort_order,deleted_at)',
 ].join(',');
 
+const SEARCH_CATALOG_SELECT = [
+  'id',
+  'name',
+  'slug',
+  'short_description',
+  'description',
+  'status',
+  'age_group',
+  'gender_target',
+  'price_regular',
+  'price_sale',
+  'low_stock_threshold',
+  'is_featured',
+  'sold_count',
+  'rating_avg',
+  'rating_count',
+  'created_at',
+  'updated_at',
+  'brands:brand_id(id,name,slug,logo_url)',
+  'product_categories(category_id,is_primary,categories(id,name,slug,parent_id,is_active,deleted_at))',
+  'product_images(url,alt_text,is_thumbnail,sort_order)',
+  'product_variants(id,sku,name,is_default,is_active)',
+].join(',');
+
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 async function run(builder) {
@@ -463,6 +487,20 @@ export async function listProductSummariesByIds(ids) {
       .select(PRODUCT_SUMMARY_SELECT)
       .in('id', ids)
       .is('deleted_at', null),
+  );
+}
+
+/**
+ * M03-M02 contract — toàn bộ sản phẩm ACTIVE kèm mô tả và mọi danh mục
+ * để M03 tự chuẩn hóa/tìm kiếm trong bộ nhớ (BR-M03-05, BR-M03-07).
+ */
+export async function listSearchCatalogRows() {
+  return run(
+    table('products')
+      .select(SEARCH_CATALOG_SELECT)
+      .eq('status', 'ACTIVE')
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false }),
   );
 }
 
