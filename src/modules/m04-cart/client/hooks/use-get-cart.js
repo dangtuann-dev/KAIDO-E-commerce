@@ -8,8 +8,9 @@ const endpoint = getApiEndpoint('API-M04-01');
 
 /**
  * API-M04-01 — Xem giỏ hàng
- * TanStack Query query khung cho GET /api/v1/cart.
- * TODO(API-M04-01): bật khi backend hoàn thiện; xử lý loading/error ở UI gọi hook.
+ * TanStack Query query cho GET /api/v1/cart.
+ * Mỗi lần gọi server đều so lại giá + tồn kho (M04-F09); `variables` nhận
+ * `{ query: { revalidate, selected_item_ids } }`.
  */
 export function useGetCart(variables = {}, options = {}) {
   return useQuery({
