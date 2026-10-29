@@ -5,8 +5,8 @@ import { removeCartItem } from '../services/cart.api.js';
 
 /**
  * API-M04-04 — Xóa sản phẩm khỏi giỏ
- * TanStack Query mutation khung cho DELETE /api/v1/cart/items/[itemId].
- * TODO(API-M04-04): bật khi backend hoàn thiện; xử lý loading/error ở UI gọi hook.
+ * TanStack Query mutation cho DELETE /api/v1/cart/items/[itemId].
+ * Response có `removed_item` + `undo_window_ms` để UI mở Undo 5 giây (M04-F04).
  */
 export function useRemoveCartItem(options = {}) {
   return useMutation({
