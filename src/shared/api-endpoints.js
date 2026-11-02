@@ -724,9 +724,9 @@ const endpoints = [
     roles: [],
     operation: 'getCheckoutSummary',
     summary: 'Tính tạm tính, phí ship, giảm giá, tổng tiền trước khi đặt (M05-F01, F03, F05).',
-    input: '{ item_ids: [...], address_id, coupon_code }',
-    output: '{ subtotal, shipping_fee, discount, final_amount }',
-    status: 'NOT_IMPLEMENTED',
+    input: '{ item_ids: [...], address_id | shipping_address, coupon_code, points_redeemed }',
+    output: '{ subtotal, shipping_fee, discount_amount, points_discount_amount, total_amount }',
+    status: 'IMPLEMENTED',
   },
   {
     code: 'API-M05-02',
@@ -740,7 +740,7 @@ const endpoints = [
     summary: 'Tạo đơn + giữ tồn kho nguyên tử bằng RPC reserve_stock (BR-M05-01, NFR-M05-01).',
     input: '{ shipping_address, payment_method, shipping_method, note, items }',
     output: '{ order_id, order_code, payment_url, status }',
-    status: 'NOT_IMPLEMENTED',
+    status: 'IMPLEMENTED',
   },
   {
     code: 'API-M05-03',
@@ -754,7 +754,7 @@ const endpoints = [
     summary: 'Chi tiết đơn + lịch sử trạng thái + thông tin thanh toán của chủ đơn.',
     input: 'order_code | order_id',
     output: '{ order_details, tracking_history, payment_info }',
-    status: 'NOT_IMPLEMENTED',
+    status: 'IMPLEMENTED',
   },
   {
     code: 'API-M05-04',
@@ -769,7 +769,7 @@ const endpoints = [
       'Webhook IPN: đọc raw body, kiểm tra HMAC-SHA512, idempotency, cập nhật giao dịch (M05-F07).',
     input: 'Query/body theo chuẩn VNPAY',
     output: '{ RspCode, Message }',
-    status: 'NOT_IMPLEMENTED',
+    status: 'IMPLEMENTED',
   },
   {
     code: 'API-M05-05',
@@ -783,7 +783,7 @@ const endpoints = [
     summary: 'Khách hủy khi đơn PENDING/CONFIRMED; giải phóng tồn kho (BR-M05-04, BR-M06-02).',
     input: '{ reason }',
     output: "{ success: true, new_status: 'CANCELLED' }",
-    status: 'NOT_IMPLEMENTED',
+    status: 'IMPLEMENTED',
   },
   {
     code: 'API-M05-06',
@@ -797,7 +797,7 @@ const endpoints = [
     summary: 'Lọc đơn theo trạng thái, từ khóa, khoảng ngày (M05-F11, M06-F05).',
     input: 'page, status, search, from_date, to_date',
     output: '{ total, items: [OrderSummary] }',
-    status: 'NOT_IMPLEMENTED',
+    status: 'IMPLEMENTED',
   },
   {
     code: 'API-M05-07',
@@ -812,7 +812,7 @@ const endpoints = [
       'Chuyển trạng thái theo ORDER_TRANSITIONS; ghi order_status_history bất biến (M05-F11).',
     input: '{ new_status, note }',
     output: '{ order_id, status, updated_at }',
-    status: 'NOT_IMPLEMENTED',
+    status: 'IMPLEMENTED',
   },
 
   // ===== TOY-M06: Đơn hàng và giao vận =====

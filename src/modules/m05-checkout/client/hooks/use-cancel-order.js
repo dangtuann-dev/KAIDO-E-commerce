@@ -4,9 +4,10 @@ import { useMutation } from '@tanstack/react-query';
 import { cancelOrder } from '../services/checkout.api.js';
 
 /**
- * API-M05-05 — Hủy đơn hàng
- * TanStack Query mutation khung cho POST /api/v1/orders/[orderRef]/cancel.
- * TODO(API-M05-05): bật khi backend hoàn thiện; xử lý loading/error ở UI gọi hook.
+ * API-M05-05 — Hủy đơn hàng (M05-F09).
+ * Chỉ hợp lệ với các trạng thái trong CUSTOMER_CANCELLABLE_STATUSES.
+ *
+ * @param {{ onSuccess?: (data: object) => void }} [options]
  */
 export function useCancelOrder(options = {}) {
   return useMutation({
