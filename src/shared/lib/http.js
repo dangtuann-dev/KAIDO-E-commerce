@@ -314,6 +314,13 @@ export const api = {
     request(path, { ...options, method: 'PUT', body }).then((result) => result.data),
   /**
    * @param {string} path
+   * @param {unknown} body
+   * @param {Parameters<typeof request>[1]} [options]
+   */
+  patch: (path, body, options) =>
+    request(path, { ...options, method: 'PATCH', body }).then((result) => result.data),
+  /**
+   * @param {string} path
    * @param {Parameters<typeof request>[1]} [options]
    */
   delete: (path, options) =>
