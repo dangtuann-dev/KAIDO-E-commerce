@@ -41,6 +41,8 @@ const MODULE_NAV = [
     children: [
       { href: '/admin/marketing/banners', label: 'Banner' },
       { href: '/admin/marketing/campaigns', label: 'Chiến dịch' },
+      { href: '/admin/marketing/articles', label: 'Bài viết' },
+      { href: '/admin/marketing/coupons', label: 'Mã giảm giá' },
     ],
   },
   { module: 'M03', href: '/admin/analytics/search', label: 'Thống kê tìm kiếm' },
