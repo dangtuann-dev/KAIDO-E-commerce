@@ -158,3 +158,72 @@ export function getSiteUrl() {
 export function getBcryptRounds() {
   return getEnv().BCRYPT_ROUNDS;
 }
+
+/**
+ * Biến môi trường của từng cổng thanh toán (M05-F04).
+ * Không ném lỗi khi thiếu: module M05 tự quyết định hạ cấp sang sandbox hoặc 503.
+ */
+const PAYMENT_GATEWAY_ENV_KEYS = Object.freeze({
+  VNPAY: Object.freeze({
+    tmnCode: 'VNPAY_TMN_CODE',
+    hashSecret: 'VNPAY_HASH_SECRET',
+    paymentUrl: 'VNPAY_URL',
+    returnUrl: 'VNPAY_RETURN_URL',
+    ipnUrl: 'VNPAY_IPN_URL',
+  }),
+  MOMO: Object.freeze({
+    partnerCode: 'MOMO_PARTNER_CODE',
+    accessKey: 'MOMO_ACCESS_KEY',
+    hashSecret: 'MOMO_SECRET_KEY',
+    endpoint: 'MOMO_ENDPOINT',
+  }),
+  ZALOPAY: Object.freeze({
+    appId: 'ZALOPAY_APP_ID',
+    key1: 'ZALOPAY_KEY1',
+    key2: 'ZALOPAY_KEY2',
+    endpoint: 'ZALOPAY_ENDPOINT',
+  }),
+});
+
+/**
+ * Đọc cấu hình cổng thanh toán ở dạng thô (có thể thiếu khóa).
+ * @param {'VNPAY' | 'MOMO' | 'ZALOPAY'} provider
+ * @returns {{ provider: string, values: Record<string, string | undefined>, configured: boolean }}
+ */
+export function getPaymentGatewayEnv(provider) {
+  const keys = PAYMENT_GATEWAY_ENV_KEYS[provider];
+  if (!keys) {
+    return { provider, values: {}, configured: false };
+  }
+
+  const values = {};
+  for (const [field, key] of Object.entries(keys)) {
+    values[field] = emptyToUndefined(process.env[key]);
+  }
+
+  const required = provider === 'VNPAY' ? ['tmnCode', 'hashSecret'] : ['hashSecret'];
+  const configured = required.every((field) => Boolean(values[field]));
+
+  return { provider, values, configured };
+}
+
+/**
+ * Trạng thái cấu hình các cổng thanh toán — dùng cho health check và UI chọn phương thức.
+ * @returns {Record<string, boolean>}
+ */
+export function getPaymentGatewayStatus() {
+  return {
+    COD: true,
+    VNPAY: getPaymentGatewayEnv('VNPAY').configured,
+    MOMO: getPaymentGatewayEnv('MOMO').configured,
+    ZALOPAY: getPaymentGatewayEnv('ZALOPAY').configured,
+  };
+}
+
+/**
+ * Cho phép mô phỏng thanh toán khi chưa cấu hình cổng thật.
+ * Chỉ bật ngoài môi trường production để không tạo lỗ hổng giả mạo IPN.
+ */
+export function isPaymentSandboxAllowed() {
+  return (process.env.NODE_ENV || 'development') !== 'production';
+}

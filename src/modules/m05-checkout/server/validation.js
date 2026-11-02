@@ -27,13 +27,22 @@ const orderRefSchema = z
     'Mã đơn hàng không hợp lệ.',
   );
 
+const regionCodeSchema = z
+  .string()
+  .trim()
+  .regex(/^[0-9]{1,6}$/, 'Mã địa phương không hợp lệ.')
+  .optional();
+
 const shippingAddressSchema = z.object({
   recipient_name: fullNameSchema,
   recipient_phone: phoneSchema,
   recipient_email: optionalEmailSchema,
   province: z.string().trim().min(1).max(100),
+  province_code: regionCodeSchema,
   district: z.string().trim().max(100).optional(),
+  district_code: regionCodeSchema,
   ward: z.string().trim().min(1).max(100),
+  ward_code: regionCodeSchema,
   address_line: streetAddressSchema,
 });
 
@@ -56,20 +65,29 @@ const adminOrdersQuerySchema = paginationQuerySchema.extend({
 
 export const validationSchemas = Object.freeze({
   'API-M05-01': {
-    body: z.object({
-      item_ids: z.array(uuidSchema).min(1).max(50),
-      address_id: uuidSchema,
-      coupon_code: voucherCodeSchema.optional(),
-      points_redeemed: z.coerce
-        .number()
-        .int()
-        .min(0)
-        .refine((value) => value % 10 === 0, 'Điểm tiêu phải là bội số của 10.'),
-    }),
+    body: z
+      .object({
+        item_ids: z.array(uuidSchema).min(1).max(50),
+        address_id: uuidSchema.optional(),
+        shipping_address: shippingAddressSchema.optional(),
+        shipping_method: z.enum(SHIPPING_METHOD_VALUES).optional(),
+        coupon_code: voucherCodeSchema.optional(),
+        points_redeemed: z.coerce
+          .number()
+          .int()
+          .min(0)
+          .refine((value) => value % 10 === 0, 'Điểm tiêu phải là bội số của 10.')
+          .default(0),
+      })
+      .refine((value) => Boolean(value.address_id) || Boolean(value.shipping_address), {
+        message: 'Cần chọn địa chỉ đã lưu hoặc nhập địa chỉ giao hàng.',
+        path: ['address_id'],
+      }),
   },
   'API-M05-02': {
     body: z.object({
       shipping_address: shippingAddressSchema,
+      address_id: uuidSchema.optional(),
       payment_method: z.enum(PAYMENT_METHOD_VALUES),
       shipping_method: z.enum(SHIPPING_METHOD_VALUES).default('STANDARD'),
       note: z.string().trim().max(500).optional(),
@@ -80,7 +98,8 @@ export const validationSchemas = Object.freeze({
         .int()
         .min(0)
         .refine((value) => value % 10 === 0, 'Điểm tiêu phải là bội số của 10.')
-        .optional(),
+        .optional()
+        .default(0),
     }),
   },
   'API-M05-03': { params: z.object({ orderRef: orderRefSchema }), query: customerOrderQuerySchema },
