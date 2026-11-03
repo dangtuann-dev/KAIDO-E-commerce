@@ -2,7 +2,7 @@
 
 - **Mã SRS:** `TOY-M06`
 - **Thư mục:** `src/modules/m06-fulfillment`
-- **Trạng thái nền tảng:** khung server, handler trả `501 NOT_IMPLEMENTED`; chưa có nghiệp vụ.
+- **Trạng thái:** đã triển khai đầy đủ server + client; RPC nằm trong `database/migrations/004_m06_fulfillment_operations.sql`.
 
 ## 1. Mục tiêu và phạm vi
 
@@ -26,8 +26,8 @@ Sở hữu vòng đời giao vận sau khi M05 tạo đơn. M05 sở hữu tạo
 | `M06-F10` | Nhận cập nhật hành trình từ ĐVVC  | API-M06-04                                    |
 | `M06-F11` | Xử lý giao thất bại & Hoàn hàng   | API-M06-04, API-M05-07                        |
 | `M06-F12` | Đổi trả & Hoàn tiền (RMA)         | API-M06-06, API-M06-07                        |
-| `M06-F13` | Thông báo trạng thái đơn tự động  | TODO — notifications qua M01/integration mail |
-| `M06-F14` | Báo cáo & Thống kê đơn hàng       | TODO — API báo cáo chưa có trong SRS          |
+| `M06-F13` | Thông báo trạng thái đơn tự động  | Ghi `notifications` (worker gửi ngoài phạm vi) |
+| `M06-F14` | Báo cáo & Thống kê đơn hàng       | API-M06-09 (`stats` theo hãng)                |
 
 Tổng: **14 FR** theo SRS (không đổi mã SRS).
 
@@ -42,6 +42,9 @@ Tổng: **14 FR** theo SRS (không đổi mã SRS).
 | `API-M06-05` | POST   | `/api/v1/orders/[orderRef]/cancel`      | auth (alias của API-M05-05) |
 | `API-M06-06` | POST   | `/api/v1/orders/[orderRef]/returns`     | auth                        |
 | `API-M06-07` | PUT    | `/api/v1/admin/returns/[id]/approve`    | role                        |
+| `API-M06-08` | GET    | `/api/v1/admin/returns`                 | role (ADMIN, STAFF)         |
+| `API-M06-09` | GET    | `/api/v1/admin/shipping/shipments`      | role (ADMIN/STAFF/KHO)      |
+| `API-M06-10` | PUT    | `/api/v1/admin/returns/[id]/status`     | role (ADMIN/STAFF/KHO)      |
 
 Registry đầy đủ tại `src/shared/api-endpoints.js`; route được sinh bởi `npm run gen:routes`.
 
@@ -54,6 +57,14 @@ Registry đầy đủ tại `src/shared/api-endpoints.js`; route được sinh b
 - `return_request_items`
 
 `shipment_events` và `order_status_history` là log bất biến. `shipping_fee_rules` do seed quản lý; đơn >= 500.000đ miễn phí (BR-M06-03).
+
+### ĐVVC: adapter + mô phỏng
+
+- Cấu hình `GHN_TOKEN` + `GHN_SHOP_ID`, `GHTK_TOKEN`, `VIETTELPOST_TOKEN` (và tùy chọn `*_API_URL`, `*_WEBHOOK_SECRET`) trong `.env.local` để gọi API thật.
+- Thiếu khóa: adapter mô phỏng (mã vận đơn + hành trình tất định) và **chỉ hoạt động ngoài production**; production trả `SERVICE_UNAVAILABLE`.
+- Webhook: gửi `x-carrier-code` (`GHN`/`GHTK`/`VIETTELPOST`) và chữ ký HMAC-SHA256 ở `x-carrier-signature` (hex hoặc base64). Chưa cấu hình secret thì chỉ nhận khi đang mô phỏng.
+- Tạo vận đơn và ghi sự kiện đi qua RPC `m06_create_shipment` / `m06_record_shipment_event` để nguyên tử với tồn kho và lịch sử trạng thái.
+- RMA ghi nhận hoàn tiền nội bộ (`refund_amount`), không gọi cổng thanh toán.
 
 ## 5. Hợp đồng public.server.js
 
@@ -98,9 +109,9 @@ m06-fulfillment/
 ├── public.server.js        # hợp đồng cho module khác (chỉ file này được import chéo)
 └── server/
     ├── constants.js        # hằng số/enum của module
-    ├── handlers.js         # map API-Mxx-yy -> handler (hiện 501)
-    ├── repository.js       # stub truy vấn Supabase
-    ├── service.js          # stub hàm theo từng FR
+    ├── handlers.js         # map API-Mxx-yy -> service
+    ├── repository.js       # truy vấn Supabase + RPC PL/pgSQL
+    ├── service.js          # nghiệp vụ theo từng FR
     ├── validation.js       # Zod schema theo API
     └── __tests__/module.test.js
 ```
@@ -119,6 +130,9 @@ m06-fulfillment/
 - **Client Component:** /account/orders/**, /admin/shipping.
 - **Component dùng toàn site:** Không có component toàn site.
 - `public.client.js` là cửa ngõ import chéo duy nhất phía client.
-- `client/components/`: mỗi component trong bảng UI Components ở mục 8 là một file khung; các component toàn site đã có bản tối giản dùng được.
+- `client/components/`: `OrderTrackingStepper`, `CarrierTrackingCard`, `CancelOrderModal`, `ReturnRequestForm`, `FulfillmentActions`, `DeliveryDashboard`, `ReturnRequestTable` (quản trị đổi trả, dùng nội bộ M06).
 - `client/hooks/`: một hook TanStack Query cho mỗi API-Mxx-yy; `client/services/`: một hàm cho mỗi API, đọc path từ `src/shared/api-endpoints.js`.
-- `client/pages/`: khung `ModuleStub`; khi triển khai phải giữ đúng chế độ render ở trên.
+- `client/pages/`: `OrderListPage`, `OrderDetailPage`, `ReturnRequestPage`, `AdminShippingPage`.
+- Trang: `/account/orders`, `/account/orders/[orderRef]`, `/account/orders/[orderRef]/return`, `/admin/shipping`.
+- `FulfillmentActions` được nhúng vào trang chi tiết đơn quản trị của M05 qua `public.client.js`; nút in phiếu giao (A5) / nhãn A6 dùng vùng `#kaido-print-area` và CSS print trong `src/app/globals.css`.
+- ReturnRequestForm dùng ảnh minh chứng dạng URL (1–5 liên kết); dự án chưa có API tải tệp (BR-M10-05).

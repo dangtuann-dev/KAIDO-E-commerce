@@ -80,3 +80,25 @@
     text-wrap: pretty;
   }
 }
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  #kaido-print-area,
+  #kaido-print-area * {
+    visibility: visible;
+  }
+
+  #kaido-print-area {
+    position: absolute;
+    inset: 0;
+    display: block !important;
+    background: #fff;
+  }
+
+  @page {
+    margin: 8mm;
+  }
+}

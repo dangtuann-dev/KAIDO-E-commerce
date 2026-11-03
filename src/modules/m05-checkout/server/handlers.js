@@ -24,4 +24,5 @@ export const handlers = Object.freeze({
   'API-M05-06': (ctx) => service.listAdminOrders({ query: ctx.query }), // M05-F11
   'API-M05-07': (ctx) =>
     service.updateOrderStatus({ auth: ctx.auth, params: ctx.params, body: ctx.body }), // M05-F11
+  'API-M05-08': (ctx) => service.listCustomerOrders({ auth: ctx.auth, query: ctx.query }), // M06-F01, F02
 });
