@@ -22,6 +22,7 @@ import {
 } from '@/shared/constants/order-status.js';
 import { PAYMENT_STATUS_LABELS } from '@/shared/constants/payment.js';
 import { ERROR_CODES } from '@/shared/constants/error-codes.js';
+import { FulfillmentActions } from '@/modules/m06-fulfillment/public.client.js';
 import OrderTrackingTimeline from '../components/OrderTrackingTimeline.jsx';
 import { formatDateTime } from '../utils/datetime.js';
 import { useGetOrderDetail } from '../hooks/use-get-order-detail.js';
@@ -334,6 +335,12 @@ export default function AdminOrderDetailPage() {
               ) : null}
             </dl>
           </section>
+
+          <FulfillmentActions
+            order={order}
+            items={items}
+            onUpdated={() => detailQuery.refetch()}
+          />
 
           <section
             aria-labelledby="admin-order-status-title"

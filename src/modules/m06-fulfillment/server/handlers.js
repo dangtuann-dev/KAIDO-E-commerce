@@ -1,17 +1,44 @@
 import 'server-only';
-import { notImplementedHandler } from '@/server/http/handlers.js';
+import * as service from './service.js';
 
 /**
  * [SERVER] M06 — handler map theo registry API.
- * Giai đoạn nền tảng: mọi handler trả 501 NOT_IMPLEMENTED kèm mã API.
- * TODO: thay từng handler bằng service tương ứng khi triển khai nghiệp vụ.
+ * API-M06-05 là alias của API-M05-05 nên không sinh route/handler riêng.
  */
 export const handlers = Object.freeze({
-  'API-M06-01': notImplementedHandler('API-M06-01'), // M06-F08
-  'API-M06-02': notImplementedHandler('API-M06-02'), // M06-F09
-  'API-M06-03': notImplementedHandler('API-M06-03'), // M06-F03
-  'API-M06-04': notImplementedHandler('API-M06-04'), // M06-F10
-  'API-M06-05': notImplementedHandler('API-M06-05'), // M06-F04
-  'API-M06-06': notImplementedHandler('API-M06-06'), // M06-F12
-  'API-M06-07': notImplementedHandler('API-M06-07'), // M06-F12
+  'API-M06-01': (ctx) => service.calculateShippingFee({ body: ctx.body }), // M06-F08
+  'API-M06-02': (ctx) =>
+    service.createFulfillment({
+      auth: ctx.auth,
+      params: ctx.params,
+      body: ctx.body,
+    }), // M06-F09
+  'API-M06-03': (ctx) =>
+    service.getOrderTracking({ auth: ctx.auth, params: ctx.params }), // M06-F03
+  'API-M06-04': (ctx) =>
+    service.handleCarrierWebhook({
+      request: ctx.request,
+      body: ctx.body,
+      rawBody: ctx.rawBody,
+    }), // M06-F10, F11
+  'API-M06-06': (ctx) =>
+    service.createReturnRequest({
+      auth: ctx.auth,
+      params: ctx.params,
+      body: ctx.body,
+    }), // M06-F12
+  'API-M06-07': (ctx) =>
+    service.approveReturnRequest({
+      auth: ctx.auth,
+      params: ctx.params,
+      body: ctx.body,
+    }), // M06-F12
+  'API-M06-08': (ctx) => service.listReturnRequests({ query: ctx.query }), // M06-F12
+  'API-M06-09': (ctx) => service.listShipments({ query: ctx.query }), // M06-F14
+  'API-M06-10': (ctx) =>
+    service.updateReturnStatus({
+      auth: ctx.auth,
+      params: ctx.params,
+      body: ctx.body,
+    }), // M06-F11, F12
 });

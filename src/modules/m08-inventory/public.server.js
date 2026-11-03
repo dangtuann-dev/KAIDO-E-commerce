@@ -1,6 +1,11 @@
 import 'server-only';
-import { listStocksBySkus } from './server/repository.js';
-import { fulfillStock, releaseStock, reserveStock } from './server/service.js';
+import { getDefaultWarehouse as findDefaultWarehouse, listStocksBySkus } from './server/repository.js';
+import {
+  fulfillStock,
+  receiveReturnedStock as receiveReturnedStockService,
+  releaseStock,
+  reserveStock,
+} from './server/service.js';
 
 /**
  * [SERVER] Hợp đồng công khai của M08 cho module khác.
@@ -52,4 +57,21 @@ export async function releaseForOrder(orderRef) {
  */
 export async function fulfillForOrder(orderRef) {
   return fulfillStock({ order_ref: orderRef });
+}
+
+/**
+ * M08-F08 — Nhập lại hàng hoàn/đổi trả vào kho (M06-F11, F12).
+ * @param {{ order_ref: string, warehouse_id: string, items: Array<{ sku: string, quantity: number, condition?: 'SELLABLE' | 'DAMAGED' }>, note?: string, auth?: object }} input
+ */
+export async function receiveReturnedStock(input) {
+  return receiveReturnedStockService(input);
+}
+
+/**
+ * Kho mặc định đang hoạt động — dùng khi webhook hoàn hàng không chỉ định kho.
+ * @returns {Promise<{ id: string, code: string, name: string, is_default: boolean } | null>}
+ */
+export async function getDefaultWarehouse() {
+  const warehouse = await findDefaultWarehouse();
+  return Array.isArray(warehouse) ? (warehouse[0] ?? null) : warehouse;
 }
