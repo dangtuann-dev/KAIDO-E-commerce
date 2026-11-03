@@ -1,30 +1,36 @@
+'use client';
+
 /**
  * [TOY-M06] Đơn hàng và giao vận — AdminShippingPage
- * SRS: M06 | API/FR: M06-F09, M06-F10, M06-F12, API-M06-02, API-M06-03, API-M06-07
+ * SRS: M06-F10, M06-F11, M06-F12, M06-F14
  * Route: /admin/shipping
- * Render: Client Component (tương tác) — TODO(M06-F09).
- * Trạng thái: TODO — khung chờ triển khai (Giai đoạn 6).
- * Việc cần làm: Dựng bảng vận đơn, tạo fulfillment và in label/phiếu giao.
+ * Render: Client Component. Thống kê giao hàng, vận đơn và duyệt đổi trả.
  */
-import ModuleStub from '@/shared/ui/module-stub.jsx';
+import Link from 'next/link';
+import DeliveryDashboard from '../components/DeliveryDashboard.jsx';
 
-// TODO(M06-F09): dựng màn hình giao vận, tạo vận đơn và duyệt đổi trả.
 export default function AdminShippingPage() {
   return (
     <div className="mx-auto max-w-6xl">
-      <ModuleStub
-        moduleCode="TOY-M06"
-        moduleName="Đơn hàng và giao vận"
-        componentName="AdminShippingPage"
-        route="/admin/shipping"
-        srsRefs={['M06-F09', 'M06-F10', 'M06-F12', 'API-M06-02', 'API-M06-03', 'API-M06-07']}
-        todos={[
-          'Dựng bảng vận đơn, tạo fulfillment và in label/phiếu giao.',
-          'Theo dõi webhook ĐVVC; xử lý giao thất bại tối đa 3 lần (BR-M06-03).',
-          'Duyệt/từ chối yêu cầu đổi trả qua API-M06-07 (M06-F12).',
-        ]}
-        description="Màn hình giao vận back-office: tạo vận đơn, bàn giao ĐVVC, theo dõi hành trình và duyệt đổi trả."
-      />
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="font-heading text-h2 text-ink">Giao vận</h1>
+          <p className="mt-1 text-body-s text-slate">
+            Theo dõi vận đơn theo đơn vị vận chuyển, tỷ lệ giao thành công và xử lý yêu cầu đổi trả
+            (M06-F14).
+          </p>
+        </div>
+        <Link
+          href="/admin/orders"
+          className="text-body-s font-semibold text-primary hover:underline"
+        >
+          Quản lý đơn hàng
+        </Link>
+      </header>
+
+      <div className="mt-6">
+        <DeliveryDashboard />
+      </div>
     </div>
   );
 }

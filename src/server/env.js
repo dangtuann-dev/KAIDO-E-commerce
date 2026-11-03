@@ -227,3 +227,79 @@ export function getPaymentGatewayStatus() {
 export function isPaymentSandboxAllowed() {
   return (process.env.NODE_ENV || 'development') !== 'production';
 }
+
+/**
+ * Biến môi trường của từng đơn vị vận chuyển (M06-F08..F11).
+ * Không ném lỗi khi thiếu: adapter tự hạ cấp sang chế độ mô phỏng ngoài production.
+ */
+const CARRIER_ENV_KEYS = Object.freeze({
+  GHN: Object.freeze({
+    token: 'GHN_TOKEN',
+    shopId: 'GHN_SHOP_ID',
+    apiUrl: 'GHN_API_URL',
+    webhookSecret: 'GHN_WEBHOOK_SECRET',
+  }),
+  GHTK: Object.freeze({
+    token: 'GHTK_TOKEN',
+    apiUrl: 'GHTK_API_URL',
+    webhookSecret: 'GHTK_WEBHOOK_SECRET',
+  }),
+  VIETTELPOST: Object.freeze({
+    token: 'VIETTELPOST_TOKEN',
+    apiUrl: 'VIETTELPOST_API_URL',
+    webhookSecret: 'VIETTELPOST_WEBHOOK_SECRET',
+  }),
+});
+
+/**
+ * Đọc cấu hình ĐVVC ở dạng thô (có thể thiếu khóa).
+ * @param {'GHN' | 'GHTK' | 'VIETTELPOST'} carrier
+ * @returns {{ carrier: string, values: Record<string, string | undefined>, configured: boolean }}
+ */
+export function getCarrierEnv(carrier) {
+  const keys = CARRIER_ENV_KEYS[carrier];
+  if (!keys) {
+    return { carrier, values: {}, configured: false };
+  }
+
+  const values = {};
+  for (const [field, key] of Object.entries(keys)) {
+    values[field] = emptyToUndefined(process.env[key]);
+  }
+
+  const required = carrier === 'GHN' ? ['token', 'shopId'] : ['token'];
+  const configured = required.every((field) => Boolean(values[field]));
+
+  return { carrier, values, configured };
+}
+
+/**
+ * Trạng thái cấu hình ĐVVC — dùng cho health check và UI chọn hãng vận chuyển.
+ * @returns {{ GHN: boolean, GHTK: boolean, VIETTELPOST: boolean, simulationAllowed: boolean }}
+ */
+export function getCarrierStatus() {
+  return {
+    GHN: getCarrierEnv('GHN').configured,
+    GHTK: getCarrierEnv('GHTK').configured,
+    VIETTELPOST: getCarrierEnv('VIETTELPOST').configured,
+    simulationAllowed: isCarrierSimulationAllowed(),
+  };
+}
+
+/**
+ * Khóa ký webhook của ĐVVC. Ưu tiên khóa riêng của hãng, sau đó tới CARRIER_WEBHOOK_SECRET.
+ * @param {'GHN' | 'GHTK' | 'VIETTELPOST'} carrier
+ * @returns {string | null}
+ */
+export function getCarrierWebhookSecret(carrier) {
+  const { values } = getCarrierEnv(carrier);
+  return values.webhookSecret || emptyToUndefined(process.env.CARRIER_WEBHOOK_SECRET) || null;
+}
+
+/**
+ * Cho phép mô phỏng vận đơn khi chưa cấu hình hãng thật.
+ * Chỉ bật ngoài môi trường production để không tạo vận đơn giả trên hệ thống thật.
+ */
+export function isCarrierSimulationAllowed() {
+  return (process.env.NODE_ENV || 'development') !== 'production';
+}

@@ -1,12 +1,26 @@
 import 'server-only';
 import { z } from 'zod';
-import { CARRIER_CODE_VALUES, SHIPPING_METHOD_VALUES } from '@/shared/constants/shipping.js';
-import { RETURN_REASON_VALUES } from '@/shared/constants/support.js';
+import {
+  CARRIER_CODE_VALUES,
+  SHIPMENT_STATUS_VALUES,
+  SHIPPING_METHOD_VALUES,
+} from '@/shared/constants/shipping.js';
+import { RETURN_REASON_VALUES, RETURN_STATUS_VALUES } from '@/shared/constants/support.js';
 import { isoDateSchema, uuidSchema } from '@/shared/validation/index.js';
 
 /** Zod schema theo API-M06-xx. */
 
 const orderRefSchema = z.string().trim().min(1).max(50);
+
+const paginationQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+
+const dateRangeShape = {
+  from_date: isoDateSchema.optional(),
+  to_date: isoDateSchema.optional(),
+};
 
 const shippingFeeBodySchema = z.object({
   address: z.object({
@@ -17,6 +31,15 @@ const shippingFeeBodySchema = z.object({
   weight: z.coerce.number().positive('Khối lượng phải lớn hơn 0.').max(100000),
   total_amount: z.coerce.number().int().min(0),
   shipping_method: z.enum(SHIPPING_METHOD_VALUES).optional(),
+});
+
+const createFulfillmentBodySchema = z.object({
+  carrier_code: z.enum(CARRIER_CODE_VALUES),
+  pickup_time: isoDateSchema.optional(),
+});
+
+const cancelBodySchema = z.object({
+  reason: z.string().trim().min(5, 'Lý do hủy tối thiểu 5 ký tự.').max(500),
 });
 
 const returnRequestBodySchema = z.object({
@@ -44,22 +67,36 @@ const approveReturnBodySchema = z
     }
   });
 
+const listReturnRequestsQuerySchema = paginationQuerySchema.extend({
+  status: z.enum(RETURN_STATUS_VALUES).optional(),
+  ...dateRangeShape,
+});
+
+const listShipmentsQuerySchema = paginationQuerySchema.extend({
+  status: z.enum(SHIPMENT_STATUS_VALUES).optional(),
+  carrier_code: z.enum(CARRIER_CODE_VALUES).optional(),
+  ...dateRangeShape,
+});
+
+const updateReturnStatusBodySchema = z.object({
+  status: z.enum(['RECEIVED', 'REFUNDED', 'CANCELLED']),
+  warehouse_id: uuidSchema.optional(),
+  condition: z.enum(['SELLABLE', 'DAMAGED']).optional(),
+  note: z.string().trim().max(500).optional(),
+});
+
 export const validationSchemas = Object.freeze({
   'API-M06-01': { body: shippingFeeBodySchema },
   'API-M06-02': {
     params: z.object({ orderRef: orderRefSchema }),
-    body: z.object({
-      carrier_code: z.enum(CARRIER_CODE_VALUES),
-      pickup_time: isoDateSchema.optional(),
-    }),
+    body: createFulfillmentBodySchema,
   },
   'API-M06-03': { params: z.object({ orderRef: orderRefSchema }) },
+  // Body webhook do từng ĐVVC quy định; service đọc rawBody để xác thực chữ ký.
   'API-M06-04': {},
   'API-M06-05': {
     params: z.object({ orderRef: orderRefSchema }),
-    body: z.object({
-      reason: z.string().trim().min(5, 'Lý do hủy tối thiểu 5 ký tự.').max(500),
-    }),
+    body: cancelBodySchema,
   },
   'API-M06-06': {
     params: z.object({ orderRef: orderRefSchema }),
@@ -68,5 +105,11 @@ export const validationSchemas = Object.freeze({
   'API-M06-07': {
     params: z.object({ id: uuidSchema }),
     body: approveReturnBodySchema,
+  },
+  'API-M06-08': { query: listReturnRequestsQuerySchema },
+  'API-M06-09': { query: listShipmentsQuerySchema },
+  'API-M06-10': {
+    params: z.object({ id: uuidSchema }),
+    body: updateReturnStatusBodySchema,
   },
 });

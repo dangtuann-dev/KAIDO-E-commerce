@@ -118,4 +118,5 @@ export const validationSchemas = Object.freeze({
       note: z.string().trim().max(500).optional(),
     }),
   },
+  'API-M05-08': { query: customerOrderQuerySchema },
 });
