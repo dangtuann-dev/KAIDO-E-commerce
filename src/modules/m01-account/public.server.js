@@ -1,10 +1,19 @@
 import 'server-only';
 import { NotImplementedError } from '@/server/http/errors.js';
+import * as repo from './server/repository.js';
 
 /**
  * [SERVER] Hợp đồng công khai của M01 cho module khác.
  * Module ngoài chỉ được import file này; không import sâu vào server/.
  */
+
+/**
+ * M07-F06 — khách hàng có ngày sinh của bé trong tháng (voucher sinh nhật).
+ * @param {number} month 1–12
+ */
+export async function listCustomersWithBirthday(month) {
+  return repo.listUsersWithBirthdayInMonth(month);
+}
 /**
  * M01-F03 — Lấy email, SĐT và tên hiển thị cho M05/M06/M10.
  * TODO: gọi service/repository tương ứng khi triển khai.

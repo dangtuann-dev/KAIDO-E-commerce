@@ -780,6 +780,14 @@ export async function createCoupon({ body, auth }) {
   return { coupon_id: coupon.coupon_id, code: coupon.code, status: coupon.status, coupon };
 }
 
+/** M07-F06 — tra coupon theo mã (voucher hệ thống như BDAY100K/BDAY200K). */
+export async function findCouponByCode(code) {
+  const normalized = String(code ?? '').trim().toUpperCase();
+  if (!normalized) return null;
+  const row = await repo.findCouponByCode(normalized);
+  return row ? mapCoupon(row) : null;
+}
+
 /** API-M09-21 — danh sách coupon back-office kèm lượt dùng (M09-F06). */
 export async function listAdminCoupons({ query = {} } = {}) {
   const { page, limit, offset } = parsePagination(query);

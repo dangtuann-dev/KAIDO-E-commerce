@@ -1,30 +1,103 @@
-/**
- * [TOY-M07] Khuyến mãi và khách thân thiết — LoyaltyPage
- * SRS: M07 | API/FR: M07-F03, M07-F04, M07-F05, M07-F06, API-M07-02, BR-M07-04
- * Route: /account/loyalty
- * Render: Client Component (tương tác) — TODO(M07-F03).
- * Trạng thái: TODO — khung chờ triển khai (Giai đoạn 6).
- * Việc cần làm: Dựng MembershipCard: hạng hiện tại, tiến trình lên hạng, quyền lợi.
- */
-import ModuleStub from '@/shared/ui/module-stub.jsx';
+'use client';
 
-// TODO(M07-F03): dựng MembershipCard và nối API-M07-02.
-export default function LoyaltyPage() {
+import Link from 'next/link';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import ProtectedRoute from '@/shared/auth/protected-route.jsx';
+import Button from '@/shared/ui/button.jsx';
+import MembershipCard from '../components/MembershipCard.jsx';
+import VoucherWalletModal from '../components/VoucherWalletModal.jsx';
+import LoyaltyHistoryTable from '../components/LoyaltyHistoryTable.jsx';
+import { getMyPoints, getPointHistory } from '../services/loyalty.api.js';
+
+const vnd = (value) => `${Number(value || 0).toLocaleString('vi-VN')}đ`;
+const num = (value) => Number(value || 0).toLocaleString('vi-VN');
+
+function Stat({ label, value }) {
   return (
-    <div className="space-y-6">
-      <ModuleStub
-        moduleCode="TOY-M07"
-        moduleName="Khuyến mãi và khách thân thiết"
-        componentName="LoyaltyPage"
-        route="/account/loyalty"
-        srsRefs={['M07-F03', 'M07-F04', 'M07-F05', 'M07-F06', 'API-M07-02', 'BR-M07-04']}
-        todos={[
-          'Dựng MembershipCard: hạng hiện tại, tiến trình lên hạng, quyền lợi.',
-          'Hiển thị điểm hiện có, điểm sắp hết hạn và giá trị quy đổi (1 điểm = 1.000đ).',
-          'Hạng xét theo chi tiêu 12 tháng gần nhất (BR-M07-04); nối API-M07-02.',
-        ]}
-        description="Trang khách thân thiết: điểm thưởng, hạng thành viên và đặc quyền tương ứng (M07-F03..F06)."
+    <div className="rounded-md border border-fog p-5">
+      <p className="text-caption text-slate">{label}</p>
+      <p className="mt-1 text-xl font-bold">{value}</p>
+    </div>
+  );
+}
+
+function LoyaltyContent() {
+  const [walletOpen, setWalletOpen] = useState(false);
+
+  const pointsQuery = useQuery({
+    queryKey: ['loyalty', 'points'],
+    queryFn: () => getMyPoints(),
+  });
+
+  const recentQuery = useQuery({
+    queryKey: ['loyalty', 'history', 1, 5],
+    queryFn: () => getPointHistory({ query: { page: 1, limit: 5 } }),
+  });
+
+  if (pointsQuery.isPending) {
+    return <p className="py-10 text-center text-slate">Đang tải...</p>;
+  }
+  if (pointsQuery.error) {
+    return (
+      <p role="alert" className="py-10 text-center text-sale">
+        {pointsQuery.error.message}
+      </p>
+    );
+  }
+
+  const points = pointsQuery.data;
+  const vouchers = points?.vouchers ?? [];
+  const usableVouchers = vouchers.filter((voucher) => voucher.usable);
+
+  return (
+    <div className="flex flex-col gap-8">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold">Điểm thưởng &amp; hạng thành viên</h1>
+        <Button variant="outline" onClick={() => setWalletOpen(true)}>
+          Ví voucher ({usableVouchers.length})
+        </Button>
+      </div>
+
+      <MembershipCard data={points} />
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Stat label="Điểm hiện có" value={num(points.total_points)} />
+        <Stat label="Giá trị quy đổi" value={vnd(points.value_vnd)} />
+        <Stat label="Sắp hết hạn (30 ngày)" value={num(points.points_expiring)} />
+      </div>
+
+      <section>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="font-semibold">Giao dịch gần đây</h2>
+          <Link href="/account/loyalty/history" className="text-body-s font-semibold text-primary">
+            Xem tất cả
+          </Link>
+        </div>
+
+        <LoyaltyHistoryTable
+          items={recentQuery.data?.history ?? []}
+          total={recentQuery.data?.total ?? 0}
+          page={1}
+          totalPages={1}
+          loading={recentQuery.isPending}
+          error={recentQuery.error}
+        />
+      </section>
+
+      <VoucherWalletModal
+        open={walletOpen}
+        onClose={() => setWalletOpen(false)}
+        vouchers={vouchers}
       />
     </div>
+  );
+}
+
+export default function LoyaltyPage() {
+  return (
+    <ProtectedRoute>
+      <LoyaltyContent />
+    </ProtectedRoute>
   );
 }

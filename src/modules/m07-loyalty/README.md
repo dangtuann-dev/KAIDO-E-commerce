@@ -2,7 +2,7 @@
 
 - **Mã SRS:** `TOY-M07`
 - **Thư mục:** `src/modules/m07-loyalty`
-- **Trạng thái nền tảng:** khung server, handler trả `501 NOT_IMPLEMENTED`; chưa có nghiệp vụ.
+- **Trạng thái:** đã triển khai nghiệp vụ (server + client). Atomic RPC nằm trong `database/migrations/005_m07_loyalty.sql`; repository tự dùng RPC khi migration đã áp dụng và có đường PostgREST compare-and-set dự phòng khi chưa.
 
 ## 1. Mục tiêu và phạm vi
 
@@ -55,6 +55,7 @@ Registry đầy đủ tại `src/shared/api-endpoints.js`; route được sinh b
 | `getLoyaltySummary`       | `userId`                   | M07-F05 | Hạng + số điểm khả dụng cho M05/M09.    |
 | `calculatePointsDiscount` | `userId, points, subtotal` | M07-F04 | Kiểm tra bội số 10 và trần 50% hóa đơn. |
 | `awardPointsForOrder`     | `orderId`                  | M07-F03 | Điểm vào khi đơn COMPLETED.             |
+| `redeemPointsForOrder`    | `orderId`                  | M07-F04 | Trừ điểm khi đặt hàng (M05 gọi).        |
 | `refundPointsForOrder`    | `orderId`                  | M07-F04 | Hoàn điểm khi đơn hủy/trả.              |
 
 Module khác chỉ được import `src/modules/m07-loyalty/public.server.js` (ESLint `kaido/no-deep-cross-module-imports`).
@@ -88,12 +89,19 @@ Module khác chỉ được import `src/modules/m07-loyalty/public.server.js` (E
 ```text
 m07-loyalty/
 ├── README.md
-├── public.server.js        # hợp đồng cho module khác (chỉ file này được import chéo)
+├── public.server.js        # hợp đồng server cho module khác
+├── public.client.js        # hợp đồng client cho module khác
+├── client/
+│   ├── components/         # MembershipCard, PointRedemptionSlider, VoucherWalletModal,
+│   │                       # LoyaltyHistoryTable, AdminVoucherForm
+│   ├── hooks/              # một hook TanStack Query cho mỗi API
+│   ├── pages/              # LoyaltyPage, LoyaltyHistoryPage, AdminVouchersPage
+│   └── services/           # loyalty.api.js
 └── server/
     ├── constants.js        # hằng số/enum của module
-    ├── handlers.js         # map API-Mxx-yy -> handler (hiện 501)
-    ├── repository.js       # stub truy vấn Supabase
-    ├── service.js          # stub hàm theo từng FR
+    ├── handlers.js         # map API-Mxx-yy -> service
+    ├── repository.js       # Supabase + RPC/compare-and-set
+    ├── service.js          # nghiệp vụ theo từng FR
     ├── validation.js       # Zod schema theo API
     └── __tests__/module.test.js
 ```
@@ -112,6 +120,6 @@ m07-loyalty/
 - **Client Component:** /account/loyalty, /account/loyalty/history, /admin/loyalty/vouchers.
 - **Component dùng toàn site:** Không có component toàn site.
 - `public.client.js` là cửa ngõ import chéo duy nhất phía client.
-- `client/components/`: mỗi component trong bảng UI Components ở mục 8 là một file khung; các component toàn site đã có bản tối giản dùng được.
+- `client/components/`: các component ở mục 8 đã có bản chạy được; trang thanh toán M05 hiện vẫn dùng ô nhập điểm riêng, chưa nhúng component M07.
 - `client/hooks/`: một hook TanStack Query cho mỗi API-Mxx-yy; `client/services/`: một hàm cho mỗi API, đọc path từ `src/shared/api-endpoints.js`.
-- `client/pages/`: khung `ModuleStub`; khi triển khai phải giữ đúng chế độ render ở trên.
+- `client/pages/`: LoyaltyPage, LoyaltyHistoryPage, AdminVouchersPage (admin dùng chung `AdminVoucherForm`, kèm thống kê hạng API-M07-06 và liên kết sang quản lý coupon M09).

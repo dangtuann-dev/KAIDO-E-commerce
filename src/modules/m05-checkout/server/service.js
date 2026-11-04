@@ -755,6 +755,8 @@ async function cancelUnreservedOrder(order, auth, reason) {
       note: reason,
     });
     await releaseForOrder(order.order_code);
+    // M07-F04 — đơn nháp bị hủy vẫn phải hoàn điểm đã trừ.
+    await LoyaltyService.refundPointsForOrder(order.id).catch(() => null);
   } catch {
     // Đơn nháp không giữ được tồn; pg_cron vẫn dọn các bản ghi treo.
   }
@@ -955,6 +957,19 @@ export async function placeOrder({ auth, body, request }) {
     change_source: 'CUSTOMER',
     note: 'Khách đặt hàng',
   });
+
+  // M07-F04 — trừ điểm ngay khi đơn được tạo; không trừ được thì hủy đơn.
+  if (Number(order.points_used ?? 0) > 0) {
+    try {
+      await LoyaltyService.redeemPointsForOrder(order.id);
+    } catch (error) {
+      await cancelUnreservedOrder(order, auth, 'Không trừ được điểm thưởng');
+      throw conflict(
+        error?.message ?? 'Không thể trừ điểm thưởng cho đơn hàng. Vui lòng thử lại.',
+        { reason: 'LOYALTY_REDEEM_FAILED' },
+      );
+    }
+  }
 
   let paymentTransaction = null;
   if (totalAmount > 0) {
@@ -1377,6 +1392,13 @@ export async function cancelOrder({ auth, params, body }) {
     }
   }
 
+  // M07-F04 — hoàn 100% điểm đã tiêu khi hủy đơn (idempotent).
+  try {
+    await LoyaltyService.refundPointsForOrder(order.id);
+  } catch {
+    // Đơn không dùng điểm hoặc M07 lỗi tạm thời: không chặn thao tác hủy.
+  }
+
   return {
     success: true,
     order_id: updated.id,
@@ -1495,6 +1517,11 @@ export async function updateOrderStatus({ auth, params, body }) {
       await releaseForOrder(updated.order_code);
     } catch {
       // Reservation có thể chưa tồn tại; bỏ qua để không chặn nghiệp vụ.
+    }
+    try {
+      await LoyaltyService.refundPointsForOrder(updated.id);
+    } catch {
+      // Đơn không dùng điểm hoặc M07 lỗi tạm thời: không chặn chuyển trạng thái.
     }
   }
 
