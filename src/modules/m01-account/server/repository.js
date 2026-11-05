@@ -151,3 +151,25 @@ export async function findLatestPasswordResetOtp(_userId) {
 export async function consumePasswordResetOtp(_id) {
   throw new NotImplementedError('M01-F05');
 }
+
+/**
+ * M07-F06 — bảng `users`, danh sách khách có `child_birthdate` trong tháng.
+ * PostgREST không lọc theo tháng nên đọc các khách còn hoạt động rồi lọc tại server.
+ */
+export async function listUsersWithBirthdayInMonth(month) {
+  const target = Number(month);
+  if (!Number.isInteger(target) || target < 1 || target > 12) return [];
+
+  const rows = await run(
+    from('users')
+      .select('id,full_name,email,child_birthdate')
+      .eq('role', 'CUSTOMER')
+      .eq('status', 'ACTIVE')
+      .is('deleted_at', null)
+      .not('child_birthdate', 'is', null),
+  );
+
+  return (rows ?? []).filter(
+    (row) => new Date(row.child_birthdate).getMonth() + 1 === target,
+  );
+}

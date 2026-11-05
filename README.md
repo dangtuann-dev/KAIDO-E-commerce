@@ -213,7 +213,7 @@ Tất cả module ở trạng thái **Skeleton**: server có validation/service/
 | M04    | Có              | Có              | Có     | 10  | 7   | Skeleton   |
 | M05    | Có              | Có              | Có     | 11  | 7   | Skeleton   |
 | M06    | Có              | Có              | Có     | 14  | 7   | Skeleton   |
-| M07    | Có              | Có              | Có     | 7   | 6   | Skeleton   |
+| M07    | Có              | Có              | Có     | 7   | 6   | Đã triển khai |
 | M08    | Có              | Có              | Có     | 13  | 7   | Skeleton   |
 | M09    | Có              | Có              | Có     | 8   | 6   | Skeleton   |
 | M10    | Có              | Có              | Có     | 11  | 7   | Skeleton   |

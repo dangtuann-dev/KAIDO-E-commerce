@@ -18,6 +18,14 @@ export const CouponService = Object.freeze({
   async releaseCoupon(input) {
     return marketingService.releaseCoupon(input);
   },
+  /** M09-F04 — tạo coupon/voucher cho M07 (M07-F01, OPEN_DECISIONS #9). */
+  async createCoupon(input) {
+    return marketingService.createCoupon(input);
+  },
+  /** M07-F06 — tra coupon hệ thống theo mã (voucher sinh nhật). */
+  async findCouponByCode(code) {
+    return marketingService.findCouponByCode(code);
+  },
 });
 
 /** M09-F07 — banner đang hiệu lực cho storefront. */

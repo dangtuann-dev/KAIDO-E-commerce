@@ -1,30 +1,48 @@
-/**
- * [TOY-M07] Khuyến mãi và khách thân thiết — LoyaltyHistoryPage
- * SRS: M07 | API/FR: M07-F07, API-M07-03
- * Route: /account/loyalty/history
- * Render: Client Component (tương tác) — TODO(M07-F07).
- * Trạng thái: TODO — khung chờ triển khai (Giai đoạn 6).
- * Việc cần làm: Dựng bảng nhật ký cộng/trừ điểm kèm lý do và mã hóa đơn.
- */
-import ModuleStub from '@/shared/ui/module-stub.jsx';
+'use client';
 
-// TODO(M07-F07): dựng bảng lịch sử điểm và nối API-M07-03.
-export default function LoyaltyHistoryPage() {
+import Link from 'next/link';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import ProtectedRoute from '@/shared/auth/protected-route.jsx';
+import LoyaltyHistoryTable from '../components/LoyaltyHistoryTable.jsx';
+import { getPointHistory } from '../services/loyalty.api.js';
+
+const LIMIT = 20;
+
+function HistoryContent() {
+  const [page, setPage] = useState(1);
+
+  const { data, isPending, error } = useQuery({
+    queryKey: ['loyalty', 'history', page, LIMIT],
+    queryFn: () => getPointHistory({ query: { page, limit: LIMIT } }),
+  });
+
   return (
-    <div className="space-y-6">
-      <ModuleStub
-        moduleCode="TOY-M07"
-        moduleName="Khuyến mãi và khách thân thiết"
-        componentName="LoyaltyHistoryPage"
-        route="/account/loyalty/history"
-        srsRefs={['M07-F07', 'API-M07-03']}
-        todos={[
-          'Dựng bảng nhật ký cộng/trừ điểm kèm lý do và mã hóa đơn.',
-          'Hiển thị ngày hết hạn của từng lô điểm (365 ngày).',
-          'Nối API-M07-03 với phân trang 20 dòng.',
-        ]}
-        description="Lịch sử biến động điểm thưởng minh bạch theo từng giao dịch và đơn hàng liên quan."
+    <div className="flex flex-col gap-6">
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="text-2xl font-bold">Lịch sử điểm thưởng</h1>
+        <Link href="/account/loyalty" className="text-body-s font-semibold text-primary">
+          Về trang điểm thưởng
+        </Link>
+      </div>
+
+      <LoyaltyHistoryTable
+        items={data?.history ?? []}
+        page={data?.page ?? page}
+        total={data?.total ?? 0}
+        totalPages={data?.total_pages ?? 1}
+        loading={isPending}
+        error={error}
+        onPageChange={setPage}
       />
     </div>
+  );
+}
+
+export default function LoyaltyHistoryPage() {
+  return (
+    <ProtectedRoute>
+      <HistoryContent />
+    </ProtectedRoute>
   );
 }

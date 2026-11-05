@@ -988,7 +988,7 @@ const endpoints = [
     summary: 'Kiểm tra hiệu lực và tính giảm giá; gọi CouponService của M09 (M07-F02).',
     input: '{ code, order_subtotal, customer_id }',
     output: '{ is_valid, discount_amount, message }',
-    status: 'NOT_IMPLEMENTED',
+    status: 'IMPLEMENTED',
   },
   {
     code: 'API-M07-02',
@@ -1002,7 +1002,7 @@ const endpoints = [
     summary: 'Số điểm hiện có, hạng thành viên, điểm sắp hết hạn (M07-F03..F06).',
     input: 'Header Bearer Token',
     output: '{ total_points, current_tier, points_expiring, value_vnd }',
-    status: 'NOT_IMPLEMENTED',
+    status: 'IMPLEMENTED',
   },
   {
     code: 'API-M07-03',
@@ -1016,7 +1016,7 @@ const endpoints = [
     summary: 'Nhật ký cộng/trừ điểm, lý do, ngày hết hạn (M07-F07).',
     input: '?page=1&limit=20',
     output: '{ total, history: [{ id, change, reason, created_at }] }',
-    status: 'NOT_IMPLEMENTED',
+    status: 'IMPLEMENTED',
   },
   {
     code: 'API-M07-04',
@@ -1031,7 +1031,7 @@ const endpoints = [
       'Tiêu điểm tối đa 50% hóa đơn, bội số 10 điểm; kết hợp voucher đúng giới hạn (M07-F04).',
     input: '{ points_redeemed, voucher_code, subtotal }',
     output: '{ total_discount, final_subtotal }',
-    status: 'NOT_IMPLEMENTED',
+    status: 'IMPLEMENTED',
   },
   {
     code: 'API-M07-05',
@@ -1045,7 +1045,7 @@ const endpoints = [
     summary: 'Tạo voucher; dùng chung CouponService với M09 (OPEN_DECISIONS #9).',
     input: '{ code, type, value, max_discount, min_order, usage_limit }',
     output: '{ voucher_id, code, status }',
-    status: 'NOT_IMPLEMENTED',
+    status: 'IMPLEMENTED',
   },
   {
     code: 'API-M07-06',
@@ -1059,7 +1059,7 @@ const endpoints = [
     summary: 'Số thành viên theo hạng và ngưỡng chi tiêu (M07-F05).',
     input: 'Không',
     output: "[{ tier: 'GOLD', member_count: 1420, min_spent: 5000000 }]",
-    status: 'NOT_IMPLEMENTED',
+    status: 'IMPLEMENTED',
   },
 
   // ===== TOY-M08: Kho và tồn kho =====
