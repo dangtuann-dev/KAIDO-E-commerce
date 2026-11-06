@@ -2,26 +2,61 @@
 
 /**
  * [TOY-M02] Sản phẩm và danh mục — VariantSelector
- * SRS: M02-F09, BR-M02-01, BR-M02-05 | API: API-M02-03
+ * SRS: M02-F09, BR-M02-01, BR-M02-05 | API: API-M02-03, API-M04-02
  * Route: /products/[slug]
- * UI: Chọn biến thể theo SKU, hiển thị tồn kho từng biến thể.
- * Nút thêm giỏ tạm khóa vì API giỏ hàng (M04) chưa triển khai.
+ * UI: Chọn biến thể theo SKU, hiển thị tồn kho từng biến thể, thêm vào giỏ (M04).
  */
 import { useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { getApiEndpoint } from '@/shared/api-endpoints.js';
 import Button from '@/shared/ui/button.jsx';
+import { useToast } from '@/shared/ui/toast.jsx';
 import { cn } from '@/shared/utils/cn.js';
+import { useAddCartItem } from '@/modules/m04-cart/public.client.js';
 import ProductStockBadge from './ProductStockBadge.jsx';
+
+const CART_QUERY_KEY = getApiEndpoint('API-M04-01').code;
 
 function initialVariantId(variants) {
   const preferred = variants.find((variant) => variant.is_default) ?? variants[0];
   return preferred?.id ?? null;
 }
 
-export default function VariantSelector({ variants = [], productName = 'sản phẩm' }) {
+export default function VariantSelector({
+  variants = [],
+  productId = null,
+  productName = 'sản phẩm',
+}) {
   const list = useMemo(() => (Array.isArray(variants) ? variants : []), [variants]);
   const [selectedId, setSelectedId] = useState(() => initialVariantId(list));
   const selected = list.find((variant) => variant.id === selectedId) ?? list[0] ?? null;
   const soldOut = selected?.stock?.status === 'OUT_OF_STOCK';
+
+  const toast = useToast();
+  const queryClient = useQueryClient();
+  const addMutation = useAddCartItem({
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [CART_QUERY_KEY] });
+      toast.success(`Đã thêm ${productName} vào giỏ hàng.`);
+    },
+    onError: (error) => {
+      toast.error(error?.message || 'Không thể thêm sản phẩm vào giỏ hàng. Vui lòng thử lại.');
+    },
+  });
+
+  function handleAddToCart() {
+    if (!productId || !selected?.id || soldOut || addMutation.isPending) return;
+
+    addMutation.mutate({
+      body: {
+        product_id: productId,
+        variant_id: selected.id,
+        quantity: 1,
+      },
+    });
+  }
+
+  const addDisabled = !productId || !selected || soldOut || addMutation.isPending;
 
   return (
     <div className="flex flex-col gap-4">
@@ -58,13 +93,24 @@ export default function VariantSelector({ variants = [], productName = 'sản ph
       ) : null}
 
       <div className="flex flex-col gap-2">
-        <Button type="button" size="lg" disabled aria-describedby="cart-unavailable-note">
-          {soldOut ? 'Tạm hết hàng' : 'Thêm vào giỏ hàng'}
+        <Button
+          type="button"
+          size="lg"
+          onClick={handleAddToCart}
+          disabled={addDisabled}
+          aria-describedby={soldOut ? 'cart-unavailable-note' : undefined}
+        >
+          {soldOut
+            ? 'Tạm hết hàng'
+            : addMutation.isPending
+              ? 'Đang thêm vào giỏ…'
+              : 'Thêm vào giỏ hàng'}
         </Button>
-        <p id="cart-unavailable-note" className="text-caption text-slate">
-          Giỏ hàng trực tuyến (M04) đang được hoàn thiện — vui lòng liên hệ cửa hàng để đặt{' '}
-          {productName}.
-        </p>
+        {soldOut ? (
+          <p id="cart-unavailable-note" className="text-caption text-slate">
+            Phân loại này hiện đã hết hàng — vui lòng chọn phân loại khác.
+          </p>
+        ) : null}
       </div>
     </div>
   );

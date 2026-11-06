@@ -12,3 +12,6 @@ export { default as OutOfStockAlert } from './client/components/OutOfStockAlert.
 export { default as CouponInputBox } from './client/components/CouponInputBox.jsx';
 export { default as SavedItemsList } from './client/components/SavedItemsList.jsx';
 export { default as GuestCartMerger } from './client/components/GuestCartMerger.jsx';
+
+// Hooks dùng chéo module (M02 — nút thêm vào giỏ ở trang chi tiết sản phẩm).
+export { useAddCartItem } from './client/hooks/use-add-cart-item.js';

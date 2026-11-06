@@ -295,7 +295,11 @@ export default async function ProductDetailPage({ params }) {
           ) : null}
 
           <div className="mt-5">
-            <VariantSelector variants={variants} productName={product.name} />
+            <VariantSelector
+              variants={variants}
+              productId={product.id}
+              productName={product.name}
+            />
           </div>
 
           <ul className="mt-5 grid gap-2 text-body-s text-slate sm:grid-cols-2">

@@ -38,6 +38,136 @@ async function callRpc(name, args) {
   return data;
 }
 
+/**
+ * RPC đọc của M08 có thể chưa tồn tại khi migration 002 chưa được chạy
+ * (PostgREST trả PGRST202/42883). Các truy vấn đọc vẫn dựng được từ bảng gốc.
+ */
+function isMissingRpc(error) {
+  const code = error?.cause?.code ?? error?.code;
+  return code === 'PGRST202' || code === '42883';
+}
+
+const STOCK_LEVEL_SELECT = [
+  'id',
+  'variant_id',
+  'warehouse_id',
+  'on_hand',
+  'reserved',
+  'available',
+  'updated_at',
+  'product_variants!inner(sku,name,product_id,deleted_at,products!inner(id,name,status,price_regular,low_stock_threshold,deleted_at))',
+  'warehouses!inner(name,is_active)',
+].join(',');
+
+const STOCK_STATUS_RANK = { OUT_OF_STOCK: 0, LOW_STOCK: 1, IN_STOCK: 2 };
+
+function num(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+/** PostgREST trả object cho quan hệ to-one, nhưng giữ tương thích nếu trả mảng. */
+function first(value) {
+  return Array.isArray(value) ? (value[0] ?? null) : (value ?? null);
+}
+
+/** Dựng bảng tồn kho phẳng từ inventory_stocks (tương đương RPC inventory_stock_levels). */
+async function loadStockLevelRows() {
+  const { data, error } = await getSupabaseAdmin()
+    .from('inventory_stocks')
+    .select(STOCK_LEVEL_SELECT);
+  if (error) throw fromSupabaseError(error);
+
+  return (data ?? [])
+    .map((row) => {
+      const variant = first(row.product_variants);
+      const product = first(variant?.products);
+      const warehouse = first(row.warehouses);
+      if (!variant || variant.deleted_at || !product || product.deleted_at) return null;
+      if (!warehouse || !warehouse.is_active) return null;
+
+      const available = num(row.available);
+      const threshold = num(product.low_stock_threshold);
+      const status =
+        available <= 0 ? 'OUT_OF_STOCK' : available <= threshold ? 'LOW_STOCK' : 'IN_STOCK';
+
+      return {
+        stock_id: row.id,
+        variant_id: row.variant_id,
+        sku: variant.sku,
+        variant_name: variant.name,
+        product_id: product.id,
+        product_name: product.name,
+        product_status: product.status,
+        warehouse_id: row.warehouse_id,
+        warehouse_name: warehouse.name,
+        on_hand: num(row.on_hand),
+        reserved: num(row.reserved),
+        available,
+        low_stock_threshold: threshold,
+        price_regular: num(product.price_regular),
+        status,
+        updated_at: row.updated_at,
+      };
+    })
+    .filter(Boolean);
+}
+
+async function listStockLevelsFallback({ keyword, warehouseId, lowStockOnly, page, limit }) {
+  const pageNumber = Math.max(1, num(page) || 1);
+  const pageSize = Math.min(Math.max(1, num(limit) || 20), 100);
+  const needle = String(keyword ?? '')
+    .trim()
+    .toLowerCase();
+
+  let rows = (await loadStockLevelRows()).filter((row) => {
+    if (warehouseId && row.warehouse_id !== warehouseId) return false;
+    if (!needle) return true;
+    return (
+      row.sku.toLowerCase().includes(needle) || row.product_name.toLowerCase().includes(needle)
+    );
+  });
+  if (lowStockOnly) rows = rows.filter((row) => row.status !== 'IN_STOCK');
+
+  rows.sort(
+    (left, right) =>
+      STOCK_STATUS_RANK[left.status] - STOCK_STATUS_RANK[right.status] ||
+      left.available - right.available ||
+      left.sku.localeCompare(right.sku),
+  );
+
+  const total = rows.length;
+  return {
+    total,
+    page: pageNumber,
+    limit: pageSize,
+    total_pages: total === 0 ? 0 : Math.ceil(total / pageSize),
+    items: rows.slice((pageNumber - 1) * pageSize, pageNumber * pageSize),
+  };
+}
+
+async function getInventorySummaryFallback() {
+  const rows = await loadStockLevelRows();
+
+  const { count, error } = await getSupabaseAdmin()
+    .from('warehouses')
+    .select('id', { count: 'exact', head: true })
+    .eq('is_active', true);
+  if (error) throw fromSupabaseError(error);
+
+  return {
+    total_skus: rows.length,
+    on_hand: rows.reduce((sum, row) => sum + row.on_hand, 0),
+    reserved: rows.reduce((sum, row) => sum + row.reserved, 0),
+    available: rows.reduce((sum, row) => sum + row.available, 0),
+    low_stock_count: rows.filter(
+      (row) => row.available > 0 && row.available <= row.low_stock_threshold,
+    ).length,
+    out_of_stock_count: rows.filter((row) => row.available <= 0).length,
+    warehouse_count: count ?? 0,
+  };
+}
+
 /* ------------------------------------------------------------------ */
 /* Inventory stock (M08-F03/F04)                                       */
 /* ------------------------------------------------------------------ */
@@ -103,17 +233,35 @@ export async function listActiveReservations(orderRef) {
 }
 
 export async function listStockLevels({ keyword, warehouseId, lowStockOnly, page, limit }) {
-  return callRpc('inventory_stock_levels', {
-    p_keyword: keyword || null,
-    p_warehouse_id: warehouseId || null,
-    p_low_stock_only: Boolean(lowStockOnly),
-    p_page: page,
-    p_limit: limit,
-  });
+  const input = {
+    keyword,
+    warehouseId,
+    lowStockOnly: Boolean(lowStockOnly),
+    page,
+    limit,
+  };
+
+  try {
+    return await callRpc('inventory_stock_levels', {
+      p_keyword: keyword || null,
+      p_warehouse_id: warehouseId || null,
+      p_low_stock_only: input.lowStockOnly,
+      p_page: page,
+      p_limit: limit,
+    });
+  } catch (error) {
+    if (!isMissingRpc(error)) throw error;
+    return listStockLevelsFallback(input);
+  }
 }
 
 export async function getInventorySummary() {
-  return callRpc('inventory_summary');
+  try {
+    return await callRpc('inventory_summary');
+  } catch (error) {
+    if (!isMissingRpc(error)) throw error;
+    return getInventorySummaryFallback();
+  }
 }
 
 /* ------------------------------------------------------------------ */
