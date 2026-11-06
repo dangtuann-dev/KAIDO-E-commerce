@@ -8,8 +8,7 @@ const endpoint = getApiEndpoint('API-M10-06');
 
 /**
  * API-M10-06 — Câu hỏi thường gặp
- * TanStack Query query khung cho GET /api/v1/support/faqs.
- * TODO(API-M10-06): bật khi backend hoàn thiện; xử lý loading/error ở UI gọi hook.
+ * GET /api/v1/support/faqs — nhóm theo chủ đề, tìm theo từ khóa (M10-F10).
  */
 export function useListFaqs(variables = {}, options = {}) {
   return useQuery({

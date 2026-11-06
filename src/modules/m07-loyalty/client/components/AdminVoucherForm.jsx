@@ -5,7 +5,7 @@
  * SRS: M07-F01 | API: API-M07-05 | BR: BR-M09-02
  * Route: /admin/loyalty/vouchers
  */
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Button from '@/shared/ui/button.jsx';
@@ -79,7 +79,7 @@ export default function AdminVoucherForm({ onCreated }) {
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     reset,
     setError,
     clearErrors,
@@ -98,7 +98,7 @@ export default function AdminVoucherForm({ onCreated }) {
     },
   });
 
-  const type = watch('type');
+  const type = useWatch({ control, name: 'type' });
 
   async function onSubmit(values) {
     clearErrors('root');

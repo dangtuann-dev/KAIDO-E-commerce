@@ -8,8 +8,7 @@ const endpoint = getApiEndpoint('API-M10-01');
 
 /**
  * API-M10-01 — Danh sách đánh giá sản phẩm
- * TanStack Query query khung cho GET /api/v1/products/[idOrSlug]/reviews.
- * TODO(API-M10-01): bật khi backend hoàn thiện; xử lý loading/error ở UI gọi hook.
+ * GET /api/v1/products/[idOrSlug]/reviews — 10 đánh giá/trang kèm phân bố sao.
  */
 export function useListProductReviews(variables = {}, options = {}) {
   return useQuery({
