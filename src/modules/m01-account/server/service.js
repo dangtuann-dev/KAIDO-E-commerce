@@ -17,6 +17,7 @@ import {
   findAddressForUser,
   insertAddress,
   patchAddress,
+  listUsers,
 } from './repository.js';
 
 const BCRYPT_ROUNDS = 12;
@@ -409,10 +410,30 @@ export async function getPurchaseHistory() {
 }
 
 /**
- * TODO(M01-F07) — Danh sách người dùng có lọc vai trò/trạng thái (BR-M01-05).
+ * M01-F07 — Danh sách người dùng có lọc vai trò/trạng thái (BR-M01-05).
+ * Chỉ trả các trường an toàn; không bao giờ trả password_hash.
  */
-export async function listAdminUsers() {
-  throw new NotImplementedError('M01-F07');
+export async function listAdminUsers({ query = {}, auth } = {}) {
+  if (!auth?.userId || auth.role !== 'ADMIN') {
+    throw fail(403, ERROR_CODES.FORBIDDEN, 'Chỉ quản trị viên mới xem được danh sách tài khoản.');
+  }
+
+  const page = Number(query.page ?? 1);
+  const limit = Number(query.limit ?? 20);
+  const { total, rows } = await listUsers({
+    page,
+    limit,
+    role: query.role ?? null,
+    status: query.status ?? null,
+    search: query.search ?? null,
+  });
+
+  return {
+    page,
+    limit,
+    total,
+    users: rows.map(({ password_hash: _omit, ...user }) => user),
+  };
 }
 
 /**

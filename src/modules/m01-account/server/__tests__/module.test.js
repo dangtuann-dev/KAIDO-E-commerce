@@ -11,13 +11,21 @@ describe('M01 — khung server', () => {
     expect(Object.keys(handlers).sort()).toEqual([...API_CODES].sort());
   });
 
-  // API-M01-06/07 chưa triển khai; còn lại đã nối service thật (đăng ký/đăng nhập/hồ sơ/địa chỉ).
-  it.each(['API-M01-06', 'API-M01-07'])('%s trả 501 NOT_IMPLEMENTED kèm mã API', async (code) => {
-    const error = await handlers[code]({}).catch((caught) => caught);
+  // API-M01-06 chưa triển khai; M01-07 đã nối danh sách người dùng cho ADMIN.
+  it('API-M01-06 trả 501 NOT_IMPLEMENTED kèm mã API', async () => {
+    const error = await handlers['API-M01-06']({}).catch((caught) => caught);
     expect(error).toBeInstanceOf(NotImplementedError);
     expect(error.status).toBe(501);
     expect(error.code).toBe('NOT_IMPLEMENTED');
-    expect(error.reference).toBe(code);
+    expect(error.reference).toBe('API-M01-06');
+  });
+
+  it('API-M01-07 chặn người dùng không phải ADMIN', async () => {
+    const error = await handlers['API-M01-07']({
+      auth: { userId: 'staff-1', role: 'STAFF' },
+      query: {},
+    }).catch((caught) => caught);
+    expect(error.status).toBe(403);
   });
 
   it('validationSchemas chỉ khai báo API của module', () => {

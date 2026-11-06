@@ -153,6 +153,37 @@ export async function consumePasswordResetOtp(_id) {
 }
 
 /**
+ * M01-F07 — danh sách người dùng back-office, lọc theo vai trò/trạng thái/từ khóa (BR-M01-05).
+ */
+export async function listUsers({ page = 1, limit = 20, role = null, status = null, search = null } = {}) {
+  const offset = (page - 1) * limit;
+  let builder = from('users')
+    .select(
+      'id,email,phone,full_name,avatar_url,role,status,child_birthdate,last_login_at,created_at',
+      { count: 'exact' },
+    )
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  if (role) builder = builder.eq('role', role);
+  if (status) builder = builder.eq('status', status);
+
+  const term = String(search ?? '')
+    .replace(/[%_,()]/g, ' ')
+    .trim();
+  if (term) {
+    builder = builder.or(
+      `full_name.ilike.%${term}%,email.ilike.%${term}%,phone.ilike.%${term}%`,
+    );
+  }
+
+  const { data, error, count } = await builder;
+  if (error) throw fromSupabaseError(error);
+  return { total: count ?? (data?.length ?? 0), rows: data ?? [] };
+}
+
+/**
  * M07-F06 — bảng `users`, danh sách khách có `child_birthdate` trong tháng.
  * PostgREST không lọc theo tháng nên đọc các khách còn hoạt động rồi lọc tại server.
  */

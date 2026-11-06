@@ -57,7 +57,7 @@ export default function AdminOrderListPage() {
           </p>
         </div>
         <Link
-          href="/admin/dashboard"
+          href="/admin"
           className="text-body-s font-semibold text-primary hover:underline"
         >
           Về bảng điều khiển

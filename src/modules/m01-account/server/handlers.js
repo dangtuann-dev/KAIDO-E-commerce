@@ -15,6 +15,7 @@ import {
   updateProfile,
   changePassword,
   logout,
+  listAdminUsers,
 } from './service.js';
 import {
   listAddresses,
@@ -93,6 +94,8 @@ const setDefaultAddressHandler = async ({ auth, params }) =>
 const changePasswordHandler = async ({ auth, body }) =>
   changePassword({ userId: auth.userId, body });
 
+const listAdminUsersHandler = async ({ auth, query }) => listAdminUsers({ auth, query });
+
 export const handlers = Object.freeze({
   'API-M01-01': registerHandler,
   'API-M01-02': loginHandler,
@@ -100,7 +103,7 @@ export const handlers = Object.freeze({
   'API-M01-04': updateProfileHandler,
   'API-M01-05': listAddressesHandler,
   'API-M01-06': notImplementedHandler('API-M01-06'),
-  'API-M01-07': notImplementedHandler('API-M01-07'),
+  'API-M01-07': listAdminUsersHandler,
   'API-M01-08': createAddressHandler,
   'API-M01-09': updateAddressHandler,
   'API-M01-10': deleteAddressHandler,
