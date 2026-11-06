@@ -16,6 +16,7 @@ import EmptyState from '@/shared/ui/empty-state.jsx';
 import Skeleton from '@/shared/ui/skeleton.jsx';
 import { useAuthStore, selectAuthUser } from '@/shared/auth/auth-store.js';
 import { useDebouncedValue } from '@/shared/hooks/use-debounced-value.js';
+import { useGetCart } from '@/modules/m04-cart/public.client.js';
 import {
   fullNameSchema,
   optionalEmailSchema,
@@ -110,7 +111,7 @@ function CheckoutContent() {
   const [placeError, setPlaceError] = useState(null);
 
   const rawItems = searchParams.get('items') ?? '';
-  const itemIds = useMemo(
+  const queryItemIds = useMemo(
     () =>
       rawItems
         .split(',')
@@ -119,6 +120,18 @@ function CheckoutContent() {
         .slice(0, MAX_ITEM_IDS),
     [rawItems],
   );
+
+  // Vào /checkout trực tiếp (hoặc từ mini-cart không kèm ?items=) vẫn lấy đúng
+  // các dòng đang được chọn trong giỏ thay vì báo giỏ trống.
+  const needsCartFallback = rawItems.trim().length === 0;
+  const cartQuery = useGetCart({}, { enabled: needsCartFallback, retry: false });
+  const fallbackItemIds = useMemo(() => {
+    const ids = Array.isArray(cartQuery.data?.selected_item_ids)
+      ? cartQuery.data.selected_item_ids
+      : [];
+    return ids.slice(0, MAX_ITEM_IDS);
+  }, [cartQuery.data]);
+  const itemIds = needsCartFallback ? fallbackItemIds : queryItemIds;
 
   // Điền sẵn thông tin người nhận từ phiên đăng nhập (chỉ một lần, không ghi đè dữ liệu đã nhập).
   useEffect(() => {
@@ -285,6 +298,14 @@ function CheckoutContent() {
   }
 
   if (itemIds.length === 0) {
+    if (needsCartFallback && cartQuery.isPending) {
+      return (
+        <div className="kaido-container py-8 md:py-10">
+          <SummarySkeleton />
+        </div>
+      );
+    }
+
     return (
       <div className="kaido-container py-8 md:py-10">
         <EmptyState
