@@ -24,7 +24,7 @@ const endpoints = [
     summary: 'Tạo tài khoản bằng email/SĐT; email và SĐT duy nhất (BR-M01-01).',
     input: '{ email, password, full_name, phone }',
     output: '{ user_id, email, access_token }',
-    status: 'NOT_IMPLEMENTED',
+    status: 'IMPLEMENTED',
   },
   {
     code: 'API-M01-02',
@@ -40,7 +40,7 @@ const endpoints = [
       'Đăng nhập email/SĐT + mật khẩu, cấp access token 15 phút và refresh token cookie 7 ngày (M01-F02).',
     input: '{ email, password }',
     output: '{ access_token, user_info, expires_in } + Set-Cookie refresh_token',
-    status: 'NOT_IMPLEMENTED',
+    status: 'IMPLEMENTED',
   },
   {
     code: 'API-M01-03',
@@ -54,7 +54,7 @@ const endpoints = [
     summary: 'Lấy thông tin hồ sơ của người dùng đang đăng nhập (M01-F03).',
     input: 'Header Authorization: Bearer <access_token>',
     output: '{ id, email, full_name, phone, child_birthdate, avatar_url }',
-    status: 'NOT_IMPLEMENTED',
+    status: 'IMPLEMENTED',
   },
   {
     code: 'API-M01-04',
@@ -68,7 +68,7 @@ const endpoints = [
     summary: 'Cập nhật họ tên, SĐT, ngày sinh của bé, avatar (M01-F03).',
     input: '{ full_name, phone, child_birthdate, avatar_url? }',
     output: '{ success: true, updated_at }',
-    status: 'NOT_IMPLEMENTED',
+    status: 'IMPLEMENTED',
   },
   {
     code: 'API-M01-05',
@@ -82,7 +82,7 @@ const endpoints = [
     summary: 'Sổ địa chỉ tối đa 10 địa chỉ, đúng 1 địa chỉ mặc định (M01-F04, BR-M01-04).',
     input: 'Header Bearer Token',
     output: '[{ id, recipient_name, phone, address, is_default }]',
-    status: 'NOT_IMPLEMENTED',
+    status: 'IMPLEMENTED',
   },
   {
     code: 'API-M01-06',
@@ -108,10 +108,10 @@ const endpoints = [
     access: 'role',
     roles: ['ADMIN'],
     operation: 'listAdminUsers',
-    summary: 'Danh sách tài khoản, lọc theo vai trò, khóa/mở khóa (M01-F07).',
-    input: '?page=1&role=customer',
-    output: '{ total, users: [UserInfo] }',
-    status: 'NOT_IMPLEMENTED',
+    summary: 'Danh sách tài khoản, lọc theo vai trò/trạng thái/từ khóa, phân trang (M01-F07).',
+    input: '?page=1&limit=20&role=CUSTOMER&status=ACTIVE&search=...',
+    output: '{ page, limit, total, users: [UserInfo] }',
+    status: 'IMPLEMENTED',
   },
   {
     code: 'API-M01-08',
@@ -126,7 +126,7 @@ const endpoints = [
     input:
       '{ recipient_name, phone, province_name, district_name?, ward_name, street_address, is_default? }',
     output: '{ id, recipient_name, ..., is_default }',
-    status: 'NOT_IMPLEMENTED',
+    status: 'IMPLEMENTED',
   },
   {
     code: 'API-M01-09',
@@ -141,7 +141,7 @@ const endpoints = [
     input:
       '{ recipient_name, phone, province_name, district_name?, ward_name, street_address, is_default? }',
     output: '{ id, ..., is_default }',
-    status: 'NOT_IMPLEMENTED',
+    status: 'IMPLEMENTED',
   },
   {
     code: 'API-M01-10',
@@ -155,7 +155,7 @@ const endpoints = [
     summary: 'Xóa mềm địa chỉ; không xóa địa chỉ mặc định khi còn địa chỉ khác (M01-F04).',
     input: 'id',
     output: '{ success: true }',
-    status: 'NOT_IMPLEMENTED',
+    status: 'IMPLEMENTED',
   },
   {
     code: 'API-M01-11',
@@ -169,7 +169,7 @@ const endpoints = [
     summary: 'Đặt một địa chỉ làm mặc định, bỏ mặc định của địa chỉ khác (M01-F04).',
     input: 'id',
     output: '{ id, is_default: true }',
-    status: 'NOT_IMPLEMENTED',
+    status: 'IMPLEMENTED',
   },
   {
     code: 'API-M01-12',
@@ -183,7 +183,7 @@ const endpoints = [
     summary: 'Đổi mật khẩu sau khi xác minh mật khẩu hiện tại (M01-F03, BR-M01-02).',
     input: '{ current_password, new_password }',
     output: '{ success: true }',
-    status: 'NOT_IMPLEMENTED',
+    status: 'IMPLEMENTED',
   },
   {
     code: 'API-M01-13',
@@ -197,7 +197,7 @@ const endpoints = [
     summary: 'Xóa cookie refresh token của phiên hiện tại (M01-F02).',
     input: 'Không',
     output: '{ success: true }',
-    status: 'NOT_IMPLEMENTED',
+    status: 'IMPLEMENTED',
   },
   {
     code: 'API-M01-14',
@@ -753,7 +753,7 @@ const endpoints = [
     operation: 'getOrderDetail',
     summary: 'Chi tiết đơn + lịch sử trạng thái + thông tin thanh toán của chủ đơn.',
     input: 'order_code | order_id',
-    output: '{ order_details, tracking_history, payment_info }',
+    output: '{ order, order_items, tracking_history, payment_info }',
     status: 'IMPLEMENTED',
   },
   {
@@ -796,7 +796,8 @@ const endpoints = [
     operation: 'listAdminOrders',
     summary: 'Lọc đơn theo trạng thái, từ khóa, khoảng ngày (M05-F11, M06-F05).',
     input: 'page, status, search, from_date, to_date',
-    output: '{ total, items: [OrderSummary] }',
+    output:
+      '{ items: [OrderSummary], pagination: { page, limit, total, total_pages }, status_counts, total_orders }',
     status: 'IMPLEMENTED',
   },
   {
@@ -914,7 +915,8 @@ const endpoints = [
     operation: 'createReturnRequest',
     summary: 'Đổi trả trong 7 ngày từ lúc nhận, tối thiểu 1 ảnh, đơn đã COMPLETED (BR-M06-05).',
     input: '{ item_ids, reason, images, note }',
-    output: "{ return_request_id, status: 'PENDING_APPROVAL' }",
+    output:
+      '{ return_request_id, return_code, order_id, order_code, status, status_label, refund_amount, requested_at, return_window_days }',
     status: 'IMPLEMENTED',
   },
   {
@@ -938,7 +940,7 @@ const endpoints = [
     method: 'GET',
     path: '/api/v1/admin/returns',
     access: 'role',
-    roles: ['ADMIN', 'STAFF'],
+    roles: ['ADMIN', 'STAFF', 'WAREHOUSE_KEEPER'],
     operation: 'listReturnRequests',
     summary: 'Lọc yêu cầu đổi trả theo trạng thái, khoảng ngày và phân trang (M06-F12).',
     input: 'page, limit, status, from_date, to_date',

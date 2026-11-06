@@ -132,6 +132,8 @@ function assertCanViewOrder(order, auth) {
   if (!order) throw notFound('Không tìm thấy đơn hàng.');
   if (isOwnedBy(order, auth?.userId)) return;
   if (isAdminRole(auth?.role)) return;
+  // M01 cấp quyền view_order_customer_info; M06 cần chi tiết đơn để đóng gói/giao vận.
+  if (auth?.role === 'WAREHOUSE_KEEPER') return;
   throw forbidden('Bạn không có quyền xem đơn hàng này.');
 }
 
@@ -401,7 +403,7 @@ export async function selectPaymentMethod(method) {
 /* ------------------------------------------------------------------ */
 
 async function verifyCouponSafely({ couponCode, subtotal, userId, lines }) {
-  if (!couponCode) return { coupon: null, discountAmount: 0, warnings: [] };
+  if (!couponCode) return { coupon: null, discountAmount: 0, freeship: false, warnings: [] };
 
   if (MAX_COUPONS_PER_ORDER < 1) {
     throw invalid('Mỗi đơn chỉ áp dụng tối đa một mã giảm giá.');
@@ -421,15 +423,22 @@ async function verifyCouponSafely({ couponCode, subtotal, userId, lines }) {
     });
 
     const discountAmount = Math.min(subtotal, amountOf(verified?.discount_amount ?? 0));
+    const freeship = Boolean(verified?.freeship);
     return {
       coupon: {
-        code: couponCode,
+        coupon_id: verified?.coupon?.coupon_id ?? verified?.coupon?.id ?? null,
+        code: verified?.coupon?.code ?? couponCode,
         valid: true,
-        name: verified?.name ?? null,
-        discount_type: verified?.discount_type ?? null,
+        name: verified?.coupon?.name ?? null,
+        discount_type: verified?.coupon?.discount_type ?? null,
+        discount_value: amountOf(verified?.coupon?.discount_value ?? 0),
+        max_discount_amount: verified?.coupon?.max_discount_amount ?? null,
+        min_order_amount: amountOf(verified?.coupon?.min_order_amount ?? 0),
+        freeship,
         discount_amount: discountAmount,
       },
       discountAmount,
+      freeship,
       warnings: [],
     };
   } catch (error) {
@@ -437,6 +446,7 @@ async function verifyCouponSafely({ couponCode, subtotal, userId, lines }) {
       return {
         coupon: { code: couponCode, valid: false, reason: 'M09_COUPON_PENDING' },
         discountAmount: 0,
+        freeship: false,
         warnings: [
           {
             type: 'COUPON_UNAVAILABLE',
@@ -516,6 +526,7 @@ export async function applyOrderDiscounts(input) {
     discountAmount: couponDiscount,
     pointsDiscountAmount: pointsDiscount,
     coupon: couponResult.coupon,
+    freeship: couponResult.freeship,
     pointsUsed: pointsResult.pointsUsed,
     pointsAvailable: pointsResult.pointsAvailable,
     warnings: [...couponResult.warnings, ...pointsResult.warnings],
@@ -625,7 +636,14 @@ export async function getCheckoutSummary({ auth, body = {} }) {
     lines,
   });
 
-  const total = Math.max(0, subtotal + shippingFee - discounts.discountAmount - discounts.pointsDiscountAmount);
+  const effectiveShippingFee = discounts.freeship ? 0 : shippingFee;
+  const total = Math.max(
+    0,
+    subtotal +
+      effectiveShippingFee -
+      discounts.discountAmount -
+      discounts.pointsDiscountAmount,
+  );
 
   return {
     cart_id: cart?.cart_id ?? null,
@@ -633,7 +651,7 @@ export async function getCheckoutSummary({ auth, body = {} }) {
     item_count: lines.reduce((sum, line) => sum + line.quantity, 0),
     shipping_address: address,
     subtotal,
-    shipping_fee: shippingFee,
+    shipping_fee: effectiveShippingFee,
     shipping_method: shipping.selected?.shipping_method ?? 'STANDARD',
     shipping_options: shipping.options,
     free_shipping_threshold: shipping.free_shipping_threshold,
@@ -755,6 +773,13 @@ async function cancelUnreservedOrder(order, auth, reason) {
       note: reason,
     });
     await releaseForOrder(order.order_code);
+    // M09-F08 — ghi nhận lượt dùng coupon phải được hoàn nếu đơn nháp bị hủy.
+    if (order.coupon_code) {
+      await CouponService.releaseCoupon({
+        code: order.coupon_code,
+        order_id: order.id,
+      }).catch(() => null);
+    }
     // M07-F04 — đơn nháp bị hủy vẫn phải hoàn điểm đã trừ.
     await LoyaltyService.refundPointsForOrder(order.id).catch(() => null);
   } catch {
@@ -847,7 +872,7 @@ export async function placeOrder({ auth, body, request }) {
     shippingMethod: body.shipping_method,
     subtotal,
   });
-  const shippingFee = shipping.selected?.fee ?? 0;
+  const baseShippingFee = shipping.selected?.fee ?? 0;
 
   const discounts = await applyOrderDiscounts({
     userId,
@@ -856,6 +881,9 @@ export async function placeOrder({ auth, body, request }) {
     subtotal,
     lines,
   });
+
+  // M09-F08 — coupon FREESHIP miễn toàn bộ phí giao của phương thức đã chọn.
+  const shippingFee = discounts.freeship ? 0 : baseShippingFee;
 
   const totalAmount = Math.max(
     0,
@@ -957,6 +985,26 @@ export async function placeOrder({ auth, body, request }) {
     change_source: 'CUSTOMER',
     note: 'Khách đặt hàng',
   });
+
+  // M09-F08 — ghi nhận lượt dùng coupon ngay khi đơn được tạo; không ghi được
+  // thì hủy đơn để tránh khách dùng lại mã đã hết lượt (BR-M09-01).
+  if (discounts.coupon?.valid) {
+    try {
+      await CouponService.consumeCoupon({
+        coupon_id: discounts.coupon.coupon_id ?? undefined,
+        coupon_code: discounts.coupon.code,
+        order_id: order.id,
+        user_id: userId,
+        discount_amount: discounts.discountAmount,
+      });
+    } catch (error) {
+      await cancelUnreservedOrder(order, auth, 'Không ghi nhận được lượt dùng mã giảm giá');
+      throw conflict(
+        error?.message ?? 'Không thể áp dụng mã giảm giá cho đơn hàng. Vui lòng thử lại.',
+        { reason: 'COUPON_CONSUME_FAILED' },
+      );
+    }
+  }
 
   // M07-F04 — trừ điểm ngay khi đơn được tạo; không trừ được thì hủy đơn.
   if (Number(order.points_used ?? 0) > 0) {

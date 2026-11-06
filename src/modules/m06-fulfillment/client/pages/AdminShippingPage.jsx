@@ -7,9 +7,15 @@
  * Render: Client Component. Thống kê giao hàng, vận đơn và duyệt đổi trả.
  */
 import Link from 'next/link';
+import { selectAuthUser, useAuthStore } from '@/shared/auth/auth-store.js';
+import { hasRole } from '@/shared/constants/roles.js';
 import DeliveryDashboard from '../components/DeliveryDashboard.jsx';
 
 export default function AdminShippingPage() {
+  const user = useAuthStore(selectAuthUser);
+  // Quản lý đơn hàng (M05) chỉ dành cho ADMIN/STAFF; kho chỉ vào M06.
+  const canManageOrders = hasRole(user?.role, ['ADMIN', 'STAFF']);
+
   return (
     <div className="mx-auto max-w-6xl">
       <header className="flex flex-wrap items-end justify-between gap-3">
@@ -20,12 +26,14 @@ export default function AdminShippingPage() {
             (M06-F14).
           </p>
         </div>
-        <Link
-          href="/admin/orders"
-          className="text-body-s font-semibold text-primary hover:underline"
-        >
-          Quản lý đơn hàng
-        </Link>
+        {canManageOrders ? (
+          <Link
+            href="/admin/orders"
+            className="text-body-s font-semibold text-primary hover:underline"
+          >
+            Quản lý đơn hàng
+          </Link>
+        ) : null}
       </header>
 
       <div className="mt-6">

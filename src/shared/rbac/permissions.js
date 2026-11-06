@@ -106,6 +106,6 @@ export function canAccessAdminPanel(role) {
 export const ADMIN_SIDEBAR_MODULES = Object.freeze({
   ADMIN: ['M01', 'M02', 'M03', 'M05', 'M06', 'M07', 'M08', 'M09', 'M10'],
   STAFF: ['M01', 'M02', 'M05', 'M06', 'M10'],
-  WAREHOUSE_KEEPER: ['M02', 'M08'],
+  WAREHOUSE_KEEPER: ['M02', 'M06', 'M08'],
   MARKETING: ['M02', 'M03', 'M07', 'M09', 'M10'],
 });
