@@ -107,6 +107,15 @@ export function fromSupabaseError(error) {
       { cause: error },
     );
   }
+  // Thiếu hàm/cột do chưa chạy migration (PGRST202: RPC không có trong schema cache,
+  // 42883: undefined_function, 42703: undefined_column).
+  if (code === 'PGRST202' || code === '42883' || code === '42703') {
+    return new AppError(
+      ERROR_CODES.SERVICE_UNAVAILABLE,
+      'Cơ sở dữ liệu chưa được cập nhật đầy đủ. Hãy chạy các file trong database/migrations.',
+      { cause: error },
+    );
+  }
   if (code === 'P0001' && source.message) {
     // RPC nghiệp vụ dùng RAISE EXCEPTION với thông điệp tiếng Việt dành cho người dùng.
     return new AppError(ERROR_CODES.CONFLICT, source.message, {
