@@ -85,6 +85,11 @@ export default function MiniCartDrawer({ open, onClose }) {
 
   const cart = cartQuery.data;
   const items = Array.isArray(cart?.items) ? cart.items.map(normalizeItem) : [];
+  const selectedIds = Array.isArray(cart?.selected_item_ids) ? cart.selected_item_ids : [];
+  const checkoutHref =
+    selectedIds.length > 0
+      ? `/checkout?items=${encodeURIComponent(selectedIds.join(','))}`
+      : '/checkout';
   const subtotal = Number(cart?.selected_subtotal ?? cart?.estimated_total ?? 0);
   const discount = Number(cart?.total_discount ?? 0);
   const estimatedTotal = Number(cart?.estimated_total ?? Math.max(0, subtotal - discount));
@@ -299,7 +304,7 @@ export default function MiniCartDrawer({ open, onClose }) {
               <Link href="/cart" onClick={onClose} className={LINK_OUTLINE}>
                 Xem giỏ hàng
               </Link>
-              <Link href="/checkout" onClick={onClose} className={LINK_PRIMARY}>
+              <Link href={checkoutHref} onClick={onClose} className={LINK_PRIMARY}>
                 Thanh toán
               </Link>
             </div>

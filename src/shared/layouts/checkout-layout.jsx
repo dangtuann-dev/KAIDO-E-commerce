@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 
 /**
  * [SHARED] CheckoutLayout — header rút gọn, không điều hướng phân tán (Blueprint §3.9).
@@ -8,16 +9,15 @@ export default function CheckoutLayout({ children }) {
     <div className="flex min-h-screen flex-col bg-surface-sky/30">
       <header className="border-b border-fog bg-white">
         <div className="kaido-container flex min-h-[64px] items-center justify-between gap-4 py-2">
-          <Link href="/" className="flex items-center gap-2" aria-label="KAIDO — về trang chủ">
-            <span
-              aria-hidden="true"
-              className="grid h-9 w-9 place-items-center rounded-sm bg-primary font-heading text-h6 text-white"
-            >
-              K
-            </span>
-            <span className="font-heading text-h4 tracking-wide text-ink">
-              KAIDO<span className="text-secondary">.</span>
-            </span>
+          <Link href="/" className="flex shrink-0 items-center" aria-label="KAIDO — về trang chủ">
+            <Image
+              src="/brand/logo-kaido-horizontal.png"
+              alt="KAIDO"
+              width={261}
+              height={80}
+              priority
+              className="h-10 w-auto"
+            />
           </Link>
           <p className="flex items-center gap-2 text-body-s font-semibold text-slate">
             <svg
