@@ -315,8 +315,8 @@ function normalizeVariantInputs(variants, productName) {
     id: variant.id,
     sku: variant.sku,
     name: variant.name?.trim() || (index === defaultIndex ? 'Mặc định' : `${productName} ${index + 1}`),
-    attributes: variant.attributes ?? {},
-    image_url: variant.image_url ?? null,
+    attributes: variant.attributes,
+    image_url: variant.image_url,
     is_default: index === defaultIndex,
     is_active: variant.is_active ?? true,
     sort_order: variant.sort_order ?? index,
@@ -932,8 +932,9 @@ async function syncVariants(productId, inputs, productName) {
     const patch = {
       sku: input.sku,
       name: input.name,
-      attributes: input.attributes,
-      image_url: input.image_url,
+      // Giữ nguyên thuộc tính/ảnh khi client không gửi lại (form sửa sản phẩm chỉ sửa SKU/tên).
+      attributes: input.attributes ?? target?.attributes ?? {},
+      image_url: input.image_url ?? target?.image_url ?? null,
       is_default: input.is_default,
       is_active: input.is_active,
       sort_order: input.sort_order,

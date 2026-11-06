@@ -264,8 +264,8 @@ export async function updateWarehouse({ id, patch }) {
     id,
     code,
     name: patch.name ?? current.name,
-    address: patch.address ?? current.address,
-    phone: patch.phone ?? current.phone,
+    address: patch.address === undefined ? current.address : patch.address,
+    phone: patch.phone === undefined ? current.phone : patch.phone,
     isDefault,
     isActive,
   });

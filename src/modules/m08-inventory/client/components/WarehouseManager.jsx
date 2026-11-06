@@ -52,8 +52,8 @@ function WarehouseForm({ initial, onSubmit, submitting, error: externalError }) 
     await onSubmit({
       code: normalizedCode,
       name: name.trim(),
-      address: address.trim() || undefined,
-      phone: phone.trim() || undefined,
+      address: address.trim(),
+      phone: phone.trim(),
       is_default: isDefault,
       is_active: isActive,
     });

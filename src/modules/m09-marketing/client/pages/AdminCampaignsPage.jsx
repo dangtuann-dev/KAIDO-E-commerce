@@ -68,11 +68,13 @@ export default function AdminCampaignsPage() {
 
   const changeStatus = useChangeCampaignStatus();
   const query = useListAdminCampaigns({
-    page: filters.page,
-    limit: PAGE_SIZE,
-    keyword: filters.keyword || undefined,
-    status: filters.status || undefined,
-    type: filters.type || undefined,
+    query: {
+      page: filters.page,
+      limit: PAGE_SIZE,
+      keyword: filters.keyword || undefined,
+      status: filters.status || undefined,
+      type: filters.type || undefined,
+    },
   });
 
   const items = query.data?.items ?? [];

@@ -27,7 +27,7 @@ function toQuery({ page, role, status, search, limit }) {
 export default function AdminUsersPage() {
   const [filters, setFilters] = useState({ page: 1, role: '', status: '', search: '' });
 
-  const query = useListAdminUsers({ ...toQuery({ ...filters, limit: DEFAULT_LIMIT }) });
+  const query = useListAdminUsers({ query: toQuery({ ...filters, limit: DEFAULT_LIMIT }) });
   const data = query.data ?? {};
 
   const handleFiltersChange = (patch) => {

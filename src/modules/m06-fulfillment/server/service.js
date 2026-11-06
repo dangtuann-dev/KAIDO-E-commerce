@@ -614,7 +614,14 @@ export async function handleCarrierWebhook({ request, body, rawBody }) {
       : null;
 
   let restocked = null;
-  if (parsed.status === SHIPMENT_STATUS.RETURNED && foundOrder) {
+  // Chỉ nhập lại kho khi đơn thực sự vừa chuyển sang RETURNED. Webhook lặp lại
+  // (previous = RETURNED) hoặc RETURNED trực tiếp từ SHIPPING không được restock.
+  if (
+    parsed.status === SHIPMENT_STATUS.RETURNED &&
+    foundOrder &&
+    result?.order_status === ORDER_STATUS.RETURNED &&
+    result?.previous_order_status !== ORDER_STATUS.RETURNED
+  ) {
     restocked = await restockReturnedShipment(foundOrder);
   }
 
@@ -931,6 +938,9 @@ export async function updateReturnStatus({ auth, params, body }) {
   }
 
   if (body.status === RETURN_STATUS.REFUNDED) {
+    if (!RETURN_MANAGER_ROLES.includes(auth?.role)) {
+      throw new AppError(ERROR_CODES.FORBIDDEN, 'Chỉ nhân viên bán hàng hoặc quản trị viên được xác nhận hoàn tiền.');
+    }
     if (request.status !== RETURN_STATUS.RECEIVED) {
       throw conflict('Chỉ hoàn tiền sau khi đã nhận hàng hoàn.', {
         status: request.status,
@@ -948,6 +958,13 @@ export async function updateReturnStatus({ auth, params, body }) {
         changedBy: auth?.userId ?? null,
       });
       orderStatus = ORDER_STATUS.RETURNED;
+    }
+
+    // M07-F04 — hoàn lại điểm đã tiêu khi đơn hoàn tất trả hàng (idempotent).
+    try {
+      await LoyaltyService.refundPointsForOrder(order.id);
+    } catch {
+      // Đơn không dùng điểm hoặc M07 lỗi tạm thời: không chặn xác nhận hoàn tiền.
     }
 
     const updated = await repo.updateReturnRequestStatus(params.id, RETURN_STATUS.REFUNDED, {
@@ -971,6 +988,9 @@ export async function updateReturnStatus({ auth, params, body }) {
   }
 
   if (body.status === RETURN_STATUS.CANCELLED) {
+    if (!RETURN_MANAGER_ROLES.includes(auth?.role)) {
+      throw new AppError(ERROR_CODES.FORBIDDEN, 'Chỉ nhân viên bán hàng hoặc quản trị viên được hủy yêu cầu đổi trả.');
+    }
     if (request.status !== RETURN_STATUS.PENDING_APPROVAL) {
       throw conflict('Chỉ hủy yêu cầu đang chờ duyệt.', { status: request.status });
     }

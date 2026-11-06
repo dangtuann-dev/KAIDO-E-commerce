@@ -97,12 +97,14 @@ function TicketQueue() {
 
   const dashboard = useGetSupportDashboard({});
   const query = useListAdminSupportTickets({
-    page: filters.page,
-    limit: PAGE_SIZE,
-    keyword: filters.keyword || undefined,
-    status: filters.status || undefined,
-    category: filters.category || undefined,
-    priority: filters.priority || undefined,
+    query: {
+      page: filters.page,
+      limit: PAGE_SIZE,
+      keyword: filters.keyword || undefined,
+      status: filters.status || undefined,
+      category: filters.category || undefined,
+      priority: filters.priority || undefined,
+    },
   });
 
   const items = query.data?.items ?? [];

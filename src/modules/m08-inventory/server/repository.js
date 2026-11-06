@@ -312,15 +312,41 @@ export async function saveWarehouse({
   isDefault,
   isActive,
 }) {
-  return callRpc('upsert_warehouse', {
-    p_id: id,
-    p_code: code,
-    p_name: name,
-    p_address: address ?? null,
-    p_phone: phone ?? null,
-    p_is_default: Boolean(isDefault),
-    p_is_active: isActive !== false,
-  });
+  try {
+    return await callRpc('upsert_warehouse', {
+      p_id: id,
+      p_code: code,
+      p_name: name,
+      p_address: address ?? null,
+      p_phone: phone ?? null,
+      p_is_default: Boolean(isDefault),
+      p_is_active: isActive !== false,
+    });
+  } catch (error) {
+    // Migration 002 chưa chạy: dùng CRUD bảng gốc thay cho RPC.
+    if (!isMissingRpc(error)) throw error;
+  }
+
+  const patch = {
+    code,
+    name,
+    address: address?.trim() || null,
+    phone: phone?.trim() || null,
+    is_default: Boolean(isDefault),
+    is_active: isActive !== false,
+  };
+  const columns = 'id,code,name,address,phone,is_default,is_active,created_at,updated_at';
+
+  if (patch.is_default) {
+    let clear = table('warehouses').update({ is_default: false }).eq('is_default', true);
+    if (id) clear = clear.neq('id', id);
+    await run(clear);
+  }
+
+  if (id) {
+    return run(table('warehouses').update(patch).eq('id', id).select(columns).maybeSingle());
+  }
+  return run(table('warehouses').insert(patch).select(columns).single());
 }
 
 /* ------------------------------------------------------------------ */

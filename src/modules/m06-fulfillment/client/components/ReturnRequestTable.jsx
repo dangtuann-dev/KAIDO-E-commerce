@@ -178,7 +178,7 @@ export default function ReturnRequestTable({ className }) {
       );
     }
 
-    if (request.status === RETURN_STATUS.RECEIVED && canUpdate) {
+    if (request.status === RETURN_STATUS.RECEIVED && canApprove) {
       buttons.push(
         <Button
           key="refunded"
@@ -191,7 +191,7 @@ export default function ReturnRequestTable({ className }) {
       );
     }
 
-    if (request.status === RETURN_STATUS.PENDING_APPROVAL && canUpdate) {
+    if (request.status === RETURN_STATUS.PENDING_APPROVAL && canApprove) {
       buttons.push(
         <Button
           key="cancel"

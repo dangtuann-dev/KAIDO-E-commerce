@@ -62,11 +62,13 @@ export default function AdminReviewsPage() {
 
   const moderate = useModerateReview();
   const query = useListAdminReviews({
-    page: filters.page,
-    limit: PAGE_SIZE,
-    keyword: filters.keyword || undefined,
-    status: filters.status || undefined,
-    rating: filters.rating || undefined,
+    query: {
+      page: filters.page,
+      limit: PAGE_SIZE,
+      keyword: filters.keyword || undefined,
+      status: filters.status || undefined,
+      rating: filters.rating || undefined,
+    },
   });
 
   const items = query.data?.items ?? [];

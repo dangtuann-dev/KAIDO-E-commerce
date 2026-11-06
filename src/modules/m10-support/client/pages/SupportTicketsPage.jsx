@@ -49,9 +49,11 @@ export default function SupportTicketsPage() {
   const [createOpen, setCreateOpen] = useState(false);
 
   const query = useListMySupportTickets({
-    page,
-    limit: PAGE_SIZE,
-    status: status || undefined,
+    query: {
+      page,
+      limit: PAGE_SIZE,
+      status: status || undefined,
+    },
   });
 
   const tickets = query.data?.items ?? [];

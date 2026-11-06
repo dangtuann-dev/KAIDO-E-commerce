@@ -33,9 +33,11 @@ export default function AdminFaqManager() {
   const deleteFaq = useDeleteFaq();
   const updateFaq = useUpdateFaq();
   const query = useListAdminFaqs({
-    keyword: filters.keyword || undefined,
-    category_id: filters.categoryId || undefined,
-    include_inactive: 'true',
+    query: {
+      keyword: filters.keyword || undefined,
+      category_id: filters.categoryId || undefined,
+      include_inactive: 'true',
+    },
   });
 
   const items = query.data?.items ?? [];

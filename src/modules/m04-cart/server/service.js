@@ -882,13 +882,48 @@ export async function getCartSummaryForCheckout(userId, itemIds) {
   return composeCart(cart, { selectedItemIds: ids });
 }
 
-/** M04-F05 — Chốt giỏ sau khi tạo đơn thành công. */
-export async function clearCartAfterOrder(cartId) {
+/** M04-F05 — Chốt giỏ sau khi tạo đơn thành công.
+ *  `orderedItems` = [{ item_id, quantity }] các dòng đã đặt; dòng chưa chọn được giữ lại.
+ *  Không truyền danh sách thì dọn toàn bộ giỏ (tương thích cũ).
+ */
+export async function clearCartAfterOrder(cartId, orderedItems = []) {
   const cart = await repo.findCartById(cartId);
   if (!cart) return { cart_id: cartId, cleared: false, removed_count: 0 };
 
-  const removed = await repo.deleteAllCartItems(cart.id);
-  await repo.updateCartStatus(cart.id, CART_STATUS.CONVERTED);
+  const entries = Array.isArray(orderedItems) ? orderedItems.filter((item) => item?.item_id) : [];
+  let removed;
+  let updatedCount = 0;
 
-  return { cart_id: cart.id, cleared: true, status: CART_STATUS.CONVERTED, removed_count: removed.length };
+  if (entries.length === 0) {
+    removed = await repo.deleteAllCartItems(cart.id);
+  } else {
+    const rows = await repo.listCartItems(cart.id);
+    const rowsById = new Map(rows.map((row) => [row.id, row]));
+    const fullIds = [];
+    for (const entry of entries) {
+      const row = rowsById.get(entry.item_id);
+      if (!row) continue;
+      const remaining = Number(row.quantity) - Number(entry.quantity ?? row.quantity);
+      if (remaining > 0) {
+        await repo.updateCartItemQuantity(row.id, remaining);
+        updatedCount += 1;
+      } else {
+        fullIds.push(row.id);
+      }
+    }
+    removed = await repo.deleteCartItems(cart.id, fullIds);
+  }
+
+  const remainingRows = await repo.listCartItems(cart.id);
+  const converted = remainingRows.length === 0;
+  if (converted) await repo.updateCartStatus(cart.id, CART_STATUS.CONVERTED);
+
+  return {
+    cart_id: cart.id,
+    cleared: converted,
+    status: converted ? CART_STATUS.CONVERTED : cart.status,
+    removed_count: removed.length,
+    updated_count: updatedCount,
+    remaining_count: remainingRows.length,
+  };
 }

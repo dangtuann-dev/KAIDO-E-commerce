@@ -118,3 +118,28 @@ describe('M05 × M09 — áp mã giảm giá qua CouponService', () => {
     expect(result.coupon.code).toBe('FREESHIP');
   });
 });
+
+describe('M05 × M07 — điểm tiêu dùng đúng số M07 cắt theo trần', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('không ghi nhận vượt quá số điểm M07 thực trừ', async () => {
+    calculatePointsDiscount.mockResolvedValue({
+      points_used: 200,
+      discount_amount: 200000,
+      available_points: 5000,
+      max_redeemable_points: 200,
+    });
+
+    const result = await applyOrderDiscounts({
+      userId: 'user-1',
+      pointsRedeemed: 5000,
+      subtotal: 400000,
+      lines: LINES,
+    });
+
+    expect(result.pointsUsed).toBe(200);
+    expect(result.pointsDiscountAmount).toBe(200000);
+  });
+});

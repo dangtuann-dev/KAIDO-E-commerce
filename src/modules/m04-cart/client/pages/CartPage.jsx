@@ -283,8 +283,11 @@ export default function CartPage() {
     try {
       const result = await selectMutation.mutateAsync({ body: { item_ids: ids } });
       const confirmed = Array.isArray(result?.selected_item_ids) ? result.selected_item_ids : ids;
-      const hasWarnings = Array.isArray(result?.warnings) && result.warnings.length > 0;
-      if (hasWarnings) {
+      const confirmedSet = new Set(confirmed);
+      const warnings = Array.isArray(result?.warnings)
+        ? result.warnings.filter((warning) => confirmedSet.has(warning.item_id))
+        : [];
+      if (warnings.length > 0) {
         toast.warning('Một số sản phẩm vừa thay đổi giá hoặc tồn kho, vui lòng kiểm tra lại.');
         await refresh();
         return;

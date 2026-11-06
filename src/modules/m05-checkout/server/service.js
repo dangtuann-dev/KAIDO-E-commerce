@@ -472,9 +472,18 @@ async function calculatePointsSafely({ userId, pointsRedeemed, subtotal, capacit
 
   try {
     const result = await LoyaltyService.calculatePointsDiscount(userId, points, subtotal);
-    const discountAmount = Math.min(ceiling, amountOf(result?.discount_amount ?? points * POINT_VALUE_VND));
+    // M07 đã cắt theo trần 50% và số điểm khả dụng; dùng đúng số điểm thực trừ để
+    // tránh trừ thừa khi khách nhập vượt hạn mức.
+    const pointsUsed = Math.max(
+      0,
+      Math.min(
+        Math.floor(Number(result?.points_used ?? 0)),
+        Math.floor(ceiling / POINT_VALUE_VND),
+      ),
+    );
+    const discountAmount = Math.min(ceiling, pointsUsed * POINT_VALUE_VND);
     return {
-      pointsUsed: points,
+      pointsUsed,
       discountAmount,
       pointsAvailable: Number(result?.available_points ?? 0),
       warnings: [],
@@ -1047,7 +1056,13 @@ export async function placeOrder({ auth, body, request }) {
 
   if (cart?.cart_id) {
     try {
-      await clearCartAfterOrder(cart.cart_id);
+      // Chỉ dọn các dòng đã đặt; sản phẩm khác khách còn giữ trong giỏ không bị xóa.
+      await clearCartAfterOrder(
+        cart.cart_id,
+        lines
+          .filter((line) => line.item_id)
+          .map((line) => ({ item_id: line.item_id, quantity: line.quantity })),
+      );
     } catch {
       // Giỏ sẽ được dọn ở lần đọc kế tiếp; không chặn đơn đã tạo.
     }

@@ -42,7 +42,7 @@ export default function AdminStockCardPage() {
   );
   const effectiveWarehouseId = warehouseId || defaultWarehouse?.id || '';
 
-  const cardQuery = useGetStockCard(filters ?? {}, { enabled: Boolean(filters) });
+  const cardQuery = useGetStockCard({ query: filters ?? {} }, { enabled: Boolean(filters) });
 
   const warehouseOptions = warehouses.map((warehouse) => ({
     value: warehouse.id,
