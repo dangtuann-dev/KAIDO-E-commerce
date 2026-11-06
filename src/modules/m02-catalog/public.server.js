@@ -85,6 +85,28 @@ export async function listProductSnapshots(productIds) {
 }
 
 /**
+ * M10-F01/F03 — Tra sản phẩm theo id hoặc slug cho đánh giá (M10).
+ * Trả `null` khi không tồn tại hoặc đã xoá mềm.
+ * @param {string} idOrSlug
+ */
+export async function getProductReference(idOrSlug) {
+  const identifier = String(idOrSlug ?? '').trim();
+  if (!identifier) return null;
+
+  const product = await repo.findProductByIdOrSlug(identifier);
+  if (!product) return null;
+
+  return {
+    product_id: product.id,
+    name: product.name,
+    slug: product.slug,
+    status: product.status,
+    rating_avg: Number(product.rating_avg ?? 0),
+    rating_count: Number(product.rating_count ?? 0),
+  };
+}
+
+/**
  * M02-F11 — Đồng bộ rating_avg/rating_count từ M10 (BR-M10-03).
  * @param {string} productId
  * @param {{ rating_avg: number, rating_count: number }} summary
