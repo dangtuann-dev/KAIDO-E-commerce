@@ -58,11 +58,13 @@ export default function AdminBannersPage() {
 
   const deleteBanner = useDeleteBanner();
   const query = useListAdminBanners({
-    page: filters.page,
-    limit: PAGE_SIZE,
-    keyword: filters.keyword || undefined,
-    position: filters.position || undefined,
-    status: filters.status || undefined,
+    query: {
+      page: filters.page,
+      limit: PAGE_SIZE,
+      keyword: filters.keyword || undefined,
+      position: filters.position || undefined,
+      status: filters.status || undefined,
+    },
   });
 
   const items = query.data?.items ?? [];

@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import ProtectedRoute from '@/shared/auth/protected-route.jsx';
 import Button from '@/shared/ui/button.jsx';
+import { useToast } from '@/shared/ui/toast.jsx';
 import MembershipCard from '../components/MembershipCard.jsx';
 import VoucherWalletModal from '../components/VoucherWalletModal.jsx';
 import LoyaltyHistoryTable from '../components/LoyaltyHistoryTable.jsx';
@@ -23,7 +24,18 @@ function Stat({ label, value }) {
 }
 
 function LoyaltyContent() {
+  const toast = useToast();
   const [walletOpen, setWalletOpen] = useState(false);
+
+  async function handleUseVoucher(code) {
+    if (!code) return;
+    try {
+      await navigator.clipboard.writeText(code);
+      toast.success(`Đã sao chép mã ${code}. Dán mã ở bước thanh toán để được giảm giá.`);
+    } catch {
+      toast.info(`Mã giảm giá của bạn: ${code}`);
+    }
+  }
 
   const pointsQuery = useQuery({
     queryKey: ['loyalty', 'points'],
@@ -89,6 +101,7 @@ function LoyaltyContent() {
         open={walletOpen}
         onClose={() => setWalletOpen(false)}
         vouchers={vouchers}
+        onSelect={handleUseVoucher}
       />
     </div>
   );

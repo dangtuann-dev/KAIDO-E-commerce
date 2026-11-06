@@ -8,6 +8,7 @@ import { useAuthStore, selectAuthStatus, selectAuthUser } from '@/shared/auth/au
 import ProtectedRoute from '@/shared/auth/protected-route.jsx';
 import Button from '@/shared/ui/button.jsx';
 import Input from '@/shared/ui/input.jsx';
+import { useToast } from '@/shared/ui/toast.jsx';
 import { getProfile, updateProfile } from '../services/account.api.js';
 
 const PHONE_PATTERN = /^0[35789]\d{8}$/;
@@ -47,6 +48,7 @@ function ProfileContent() {
 
 function ProfileForm({ profile }) {
   const queryClient = useQueryClient();
+  const toast = useToast();
   const setUser = useAuthStore((state) => state.setUser);
   const currentUser = useAuthStore(selectAuthUser);
   const {
@@ -62,20 +64,25 @@ function ProfileForm({ profile }) {
     },
   });
 
-    async function onSubmit(values) {
-    const updated = await updateProfile({
-      body: {
-        full_name: values.full_name,
-        phone: values.phone,
-        child_birthdate: values.child_birthdate || null,
-      },
-    });
+  async function onSubmit(values) {
+    try {
+      const updated = await updateProfile({
+        body: {
+          full_name: values.full_name,
+          phone: values.phone,
+          child_birthdate: values.child_birthdate || null,
+        },
+      });
 
-    // Đồng bộ auth store: header, tên chào, và mọi nơi đọc user từ store đều đổi theo
-    setUser({ ...currentUser, ...updated });
+      // Đồng bộ auth store: header, tên chào, và mọi nơi đọc user từ store đều đổi theo
+      setUser({ ...currentUser, ...updated });
 
-    // Làm mới cache: hồ sơ và các dữ liệu liên quan tải lại từ server
-    await queryClient.invalidateQueries({ queryKey: ['account'] });
+      // Làm mới cache: hồ sơ và các dữ liệu liên quan tải lại từ server
+      await queryClient.invalidateQueries({ queryKey: ['account'] });
+      toast.success('Đã cập nhật hồ sơ.');
+    } catch (error) {
+      toast.error(error?.message ?? 'Không thể cập nhật hồ sơ. Vui lòng thử lại.');
+    }
   }
 
 

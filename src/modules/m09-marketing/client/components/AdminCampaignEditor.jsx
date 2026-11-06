@@ -95,7 +95,7 @@ function CampaignFormBody({ campaign, onClose, onSaved }) {
   const updateCampaign = useUpdateCampaign();
   const saving = createCampaign.isPending || updateCampaign.isPending;
 
-  const { data: bannerData } = useListAdminBanners({ limit: 100 });
+  const { data: bannerData } = useListAdminBanners({ query: { limit: 100 } });
   const { data: searchData, isFetching: searching } = useSearchCatalogProducts(term);
 
   const bannerOptions = useMemo(

@@ -75,7 +75,7 @@ export default function MyReviewsPage() {
   const [removing, setRemoving] = useState(null);
   const deleteReview = useDeleteReview();
 
-  const query = useListMyReviews({ page, limit: PAGE_SIZE });
+  const query = useListMyReviews({ query: { page, limit: PAGE_SIZE } });
   const reviews = query.data?.items ?? [];
 
   async function confirmDelete() {

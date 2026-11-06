@@ -72,10 +72,12 @@ export default function AdminCouponsPage() {
 
   const deleteCoupon = useDeleteCoupon();
   const query = useListAdminCoupons({
-    page: filters.page,
-    limit: PAGE_SIZE,
-    keyword: filters.keyword || undefined,
-    status: filters.status || undefined,
+    query: {
+      page: filters.page,
+      limit: PAGE_SIZE,
+      keyword: filters.keyword || undefined,
+      status: filters.status || undefined,
+    },
   });
 
   const items = query.data?.items ?? [];

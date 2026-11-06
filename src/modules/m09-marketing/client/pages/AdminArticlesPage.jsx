@@ -53,11 +53,13 @@ export default function AdminArticlesPage() {
 
   const deleteArticle = useDeleteArticle();
   const query = useListAdminArticles({
-    page: filters.page,
-    limit: PAGE_SIZE,
-    keyword: filters.keyword || undefined,
-    status: filters.status || undefined,
-    category: filters.category || undefined,
+    query: {
+      page: filters.page,
+      limit: PAGE_SIZE,
+      keyword: filters.keyword || undefined,
+      status: filters.status || undefined,
+      category: filters.category || undefined,
+    },
   });
 
   const items = query.data?.items ?? [];

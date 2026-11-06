@@ -389,6 +389,15 @@ function AuthModalDialog({ open, onClose, initialMode }) {
     clearUrlMode();
   }
 
+  // Sau khi đăng nhập/đăng ký thành công, quay lại trang được bảo vệ mà khách định vào.
+  function handleDone() {
+    const next = searchParams.get(NEXT_PARAM);
+    close();
+    if (next && next.startsWith('/') && !next.startsWith('//')) {
+      router.replace(next);
+    }
+  }
+
   function switchMode(nextMode) {
     setLocalMode(nextMode);
     if (urlMode === null) return;
@@ -423,9 +432,9 @@ function AuthModalDialog({ open, onClose, initialMode }) {
       </div>
 
       {mode === 'login' ? (
-        <LoginForm onDone={close} onSwitchMode={switchMode} />
+        <LoginForm onDone={handleDone} onSwitchMode={switchMode} />
       ) : mode === 'register' ? (
-        <RegisterForm onDone={close} onSwitchMode={switchMode} />
+        <RegisterForm onDone={handleDone} onSwitchMode={switchMode} />
       ) : (
         <ForgotForm onSwitchMode={switchMode} />
       )}

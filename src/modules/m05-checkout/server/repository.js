@@ -75,6 +75,41 @@ const ORDER_COLUMNS = [
   'updated_at',
 ].join(',');
 
+/**
+ * Migration 004 bổ sung 3 cột mã địa chỉ. DB chưa chạy migration sẽ trả 42703;
+ * các truy vấn đơn hàng tự lùi về bộ cột cũ thay vì làm hỏng trang đơn/đặt hàng.
+ */
+const OPTIONAL_ORDER_COLUMNS = Object.freeze([
+  'shipping_province_code',
+  'shipping_district_code',
+  'shipping_ward_code',
+]);
+
+const ORDER_COLUMNS_FALLBACK = ORDER_COLUMNS.split(',')
+  .filter((column) => !OPTIONAL_ORDER_COLUMNS.includes(column))
+  .join(',');
+
+function isMissingOptionalOrderColumn(error) {
+  if (error?.cause?.code !== '42703') return false;
+  const message = String(error.cause.message ?? '');
+  return OPTIONAL_ORDER_COLUMNS.some((column) => message.includes(column));
+}
+
+function withoutOptionalOrderColumns(payload) {
+  const next = { ...payload };
+  for (const column of OPTIONAL_ORDER_COLUMNS) delete next[column];
+  return next;
+}
+
+async function withOrderColumns(build, executor) {
+  try {
+    return await executor(build(ORDER_COLUMNS));
+  } catch (error) {
+    if (!isMissingOptionalOrderColumn(error)) throw error;
+    return executor(build(ORDER_COLUMNS_FALLBACK));
+  }
+}
+
 const ORDER_ITEM_COLUMNS = [
   'id',
   'order_id',
@@ -166,41 +201,70 @@ export async function listActiveShippingFeeRules(shippingMethod) {
 /* ------------------------------------------------------------------ */
 
 export async function insertOrder(payload) {
-  return runOne(table('orders').insert(payload).select(ORDER_COLUMNS).single());
+  try {
+    return await runOne(table('orders').insert(payload).select(ORDER_COLUMNS).single());
+  } catch (error) {
+    if (!isMissingOptionalOrderColumn(error)) throw error;
+    return runOne(
+      table('orders')
+        .insert(withoutOptionalOrderColumns(payload))
+        .select(ORDER_COLUMNS_FALLBACK)
+        .single(),
+    );
+  }
 }
 
 export async function findOrderByRef(orderRef) {
   const reference = String(orderRef ?? '').trim();
   if (!reference) return null;
 
-  const builder = table('orders').select(ORDER_COLUMNS);
-  const query = UUID_PATTERN.test(reference)
-    ? builder.eq('id', reference)
-    : builder.eq('order_code', reference);
-
-  return runOne(query.maybeSingle());
+  return withOrderColumns(
+    (columns) => {
+      const builder = table('orders').select(columns);
+      return UUID_PATTERN.test(reference)
+        ? builder.eq('id', reference).maybeSingle()
+        : builder.eq('order_code', reference).maybeSingle();
+    },
+    runOne,
+  );
 }
 
 export async function findOrderById(orderId) {
-  return runOne(table('orders').select(ORDER_COLUMNS).eq('id', orderId).maybeSingle());
+  return withOrderColumns(
+    (columns) => table('orders').select(columns).eq('id', orderId).maybeSingle(),
+    runOne,
+  );
 }
 
 export async function updateOrder(orderId, patch) {
-  return runOne(
-    table('orders')
-      .update({ ...patch, updated_at: new Date().toISOString() })
-      .eq('id', orderId)
-      .select(ORDER_COLUMNS)
-      .single(),
-  );
+  const payload = { ...patch, updated_at: new Date().toISOString() };
+  try {
+    return await runOne(
+      table('orders').update(payload).eq('id', orderId).select(ORDER_COLUMNS).single(),
+    );
+  } catch (error) {
+    if (!isMissingOptionalOrderColumn(error)) throw error;
+    return runOne(
+      table('orders')
+        .update(withoutOptionalOrderColumns(payload))
+        .eq('id', orderId)
+        .select(ORDER_COLUMNS_FALLBACK)
+        .single(),
+    );
+  }
 }
 
 export async function listOrdersByUser(userId, { status, page = 1, limit = 10 } = {}) {
   const from = (Math.max(1, page) - 1) * limit;
-  let builder = table('orders').select(ORDER_COLUMNS, { count: 'exact' }).eq('user_id', userId);
-  if (status) builder = builder.eq('status', status);
 
-  return runPage(builder.order('created_at', { ascending: false }).range(from, from + limit - 1));
+  return withOrderColumns(
+    (columns) => {
+      let builder = table('orders').select(columns, { count: 'exact' }).eq('user_id', userId);
+      if (status) builder = builder.eq('status', status);
+      return builder.order('created_at', { ascending: false }).range(from, from + limit - 1);
+    },
+    runPage,
+  );
 }
 
 export async function listAdminOrders({
@@ -212,24 +276,30 @@ export async function listAdminOrders({
   limit = 20,
 } = {}) {
   const offset = (Math.max(1, page) - 1) * limit;
-  let builder = table('orders').select(ORDER_COLUMNS, { count: 'exact' });
 
-  if (status) builder = builder.eq('status', status);
-  if (fromDate) builder = builder.gte('created_at', `${fromDate}T00:00:00.000Z`);
-  if (toDate) builder = builder.lte('created_at', `${toDate}T23:59:59.999Z`);
-  if (search) {
-    const keyword = String(search).trim();
-    builder = builder.or(
-      [
-        `order_code.ilike.%${keyword}%`,
-        `recipient_name.ilike.%${keyword}%`,
-        `recipient_phone.ilike.%${keyword}%`,
-        `recipient_email.ilike.%${keyword}%`,
-      ].join(','),
-    );
-  }
+  return withOrderColumns(
+    (columns) => {
+      let builder = table('orders').select(columns, { count: 'exact' });
 
-  return runPage(builder.order('created_at', { ascending: false }).range(offset, offset + limit - 1));
+      if (status) builder = builder.eq('status', status);
+      if (fromDate) builder = builder.gte('created_at', `${fromDate}T00:00:00.000Z`);
+      if (toDate) builder = builder.lte('created_at', `${toDate}T23:59:59.999Z`);
+      if (search) {
+        const keyword = String(search).trim();
+        builder = builder.or(
+          [
+            `order_code.ilike.%${keyword}%`,
+            `recipient_name.ilike.%${keyword}%`,
+            `recipient_phone.ilike.%${keyword}%`,
+            `recipient_email.ilike.%${keyword}%`,
+          ].join(','),
+        );
+      }
+
+      return builder.order('created_at', { ascending: false }).range(offset, offset + limit - 1);
+    },
+    runPage,
+  );
 }
 
 export async function countOrdersByStatus({ search, fromDate, toDate } = {}) {
