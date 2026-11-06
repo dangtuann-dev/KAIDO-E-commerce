@@ -12,6 +12,7 @@ const ACCOUNT_LINKS = [
   { href: '/account/addresses', label: 'Sổ địa chỉ' },
   { href: '/account/security', label: 'Bảo mật tài khoản' },
   { href: '/account/orders', label: 'Đơn hàng của tôi' },
+  { href: '/account/reviews', label: 'Đánh giá của tôi' },
   { href: '/account/loyalty', label: 'Điểm thưởng & hạng thành viên' },
   { href: '/account/support', label: 'Yêu cầu hỗ trợ' },
 ];

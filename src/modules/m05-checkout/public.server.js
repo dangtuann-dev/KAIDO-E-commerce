@@ -75,6 +75,36 @@ export async function isOrderOwnedByUser(orderRef, userId) {
 }
 
 /**
+ * M10-F01 — Dòng hàng đã mua để xác thực đánh giá (Verified Purchase).
+ * Chỉ trả kết quả khi đơn thuộc khách, đã COMPLETED và có sản phẩm tương ứng.
+ *
+ * @param {{ orderRef: string, userId: string, productId: string }} input
+ * @returns {Promise<{ order_id: string, order_code: string, order_status: string, order_item_id: string, product_id: string, variant_id: string | null } | null>}
+ */
+export async function findVerifiedOrderItem(input) {
+  const userId = input?.userId;
+  const productId = input?.productId;
+  if (!userId || !productId) return null;
+
+  const order = await repo.findOrderByRef(input?.orderRef);
+  if (!order || order.user_id !== userId) return null;
+  if (order.status !== ORDER_STATUS.COMPLETED) return null;
+
+  const items = await repo.listOrderItems(order.id);
+  const item = items.find((row) => row.product_id === productId);
+  if (!item) return null;
+
+  return {
+    order_id: order.id,
+    order_code: order.order_code,
+    order_status: order.status,
+    order_item_id: item.id,
+    product_id: item.product_id,
+    variant_id: item.variant_id ?? null,
+  };
+}
+
+/**
  * M05-F07 — Ghi nhận kết quả thanh toán từ cổng (idempotent).
  * Dùng chung cho IPN VNPAY, webhook MoMo/ZaloPay và xử lý tay của CSKH.
  *

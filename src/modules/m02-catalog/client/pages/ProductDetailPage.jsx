@@ -18,6 +18,7 @@ import VariantSelector from '../components/VariantSelector.jsx';
 import ProductStockBadge from '../components/ProductStockBadge.jsx';
 import AgeBadge from '../components/AgeBadge.jsx';
 import ProductCard from '../components/ProductCard.jsx';
+import { ProductReviewsSection } from '@/modules/m10-support/public.client.js';
 import { getProductDetail } from '../../server/service.js';
 
 const loadProduct = cache(async (slug) => getProductDetail({ idOrSlug: slug }));
@@ -388,6 +389,8 @@ export default async function ProductDetailPage({ params }) {
           )}
         </section>
       </div>
+
+      <ProductReviewsSection productRef={product.slug} productName={product.name} />
 
       {related.length > 0 ? (
         <section aria-labelledby="related-heading" className="mt-12">
