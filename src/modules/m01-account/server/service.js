@@ -1,4 +1,6 @@
 import bcrypt from 'bcryptjs';
+import { createHash, randomInt } from 'node:crypto';
+import { isIP } from 'node:net';
 import { AppError, NotImplementedError } from '@/server/http/errors.js';
 import { BUSINESS_RULES } from '@/shared/constants/business-rules.js';
 import { ERROR_CODES } from '@/shared/constants/error-codes.js';
@@ -9,6 +11,10 @@ import {
   findUserById,
   createUser,
   updateUser,
+  countPasswordResetOtpsSince,
+  consumeActivePasswordResetOtps,
+  createPasswordResetOtp,
+  enqueuePasswordResetOtp,
 } from './repository.js';
 import 'server-only';
 import { z } from 'zod';
@@ -22,6 +28,10 @@ import {
 
 const BCRYPT_ROUNDS = 12;
 const MAX_ADDRESSES = 10;
+
+function hashOtp(code) {
+  return createHash('sha256').update(String(code)).digest('hex');
+}
 
 const addressSchema = z.object({
   recipient_name: z.string().trim().min(2, 'Tên người nhận tối thiểu 2 ký tự.').max(50),
@@ -117,8 +127,27 @@ export async function registerAccount({ email, password, full_name, phone }) {
     status: 'ACTIVE',
   });
 
+  // Đăng ký xong dùng được ngay: cấp phiên như đăng nhập (API-M01-01).
+  const { token: accessToken, expiresIn } = await signAccessToken({
+    userId: user.id,
+    role: user.role,
+    email: user.email,
+  });
+  const { token: refreshToken, expiresIn: refreshTtl } = await signRefreshToken({
+    userId: user.id,
+    role: user.role,
+  });
+
   const { password_hash: _omit, ...safeUser } = user;
-  return safeUser;
+  return {
+    user_id: user.id,
+    email: user.email,
+    access_token: accessToken,
+    expires_in: expiresIn,
+    user_info: safeUser,
+    refresh_token: refreshToken,
+    refresh_expires_in: refreshTtl,
+  };
 }
 
 /**
@@ -382,10 +411,44 @@ export async function setDefaultAddress({ userId, id }) {
 }
 
 /**
- * TODO(M01-F05) — Sinh OTP 5 phút, giới hạn 3 lần gửi/giờ, gửi qua integration mail/SMS.
+ * M01-F05 — Sinh OTP 5 phút, giới hạn 3 lần gửi/giờ, đẩy vào hàng đợi email.
+ * Luôn trả OTP_SENT cho email không tồn tại để tránh dò tài khoản.
  */
-export async function requestPasswordReset() {
-  throw new NotImplementedError('M01-F05');
+export async function requestPasswordReset({ email, ip = null } = {}) {
+  const expiredIn = BUSINESS_RULES.AUTH.OTP_TTL_SECONDS;
+  const normalizedEmail = String(email ?? '').trim().toLowerCase();
+  const user = normalizedEmail ? await findUserByEmail(normalizedEmail) : null;
+
+  if (!user || user.status !== 'ACTIVE') {
+    return { message: 'OTP_SENT', expired_in: expiredIn };
+  }
+
+  const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  const sentInLastHour = await countPasswordResetOtpsSince(user.id, since);
+  if (sentInLastHour >= BUSINESS_RULES.AUTH.OTP_MAX_RESENDS_PER_HOUR) {
+    throw fail(
+      429,
+      ERROR_CODES.RATE_LIMITED,
+      `Bạn đã yêu cầu OTP ${sentInLastHour} lần trong một giờ. Vui lòng thử lại sau.`,
+    );
+  }
+
+  const otp = String(randomInt(0, 1_000_000)).padStart(6, '0');
+  const expiresAt = new Date(Date.now() + expiredIn * 1000).toISOString();
+
+  await consumeActivePasswordResetOtps(user.id);
+  await createPasswordResetOtp(user.id, {
+    code_hash: hashOtp(otp),
+    expires_at: expiresAt,
+    ip_address: isIP(ip ?? '') ? ip : null,
+  });
+  await enqueuePasswordResetOtp(user.id, {
+    email: user.email,
+    otp,
+    expires_in: expiredIn,
+  });
+
+  return { message: 'OTP_SENT', expired_in: expiredIn };
 }
 
 /**

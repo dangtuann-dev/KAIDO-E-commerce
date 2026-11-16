@@ -233,6 +233,24 @@ function categorySubtreeIds(rows, rootId) {
   return ids;
 }
 
+/**
+ * Danh mục chỉ hiển thị công khai khi chính nó và toàn bộ tổ tiên còn hoạt động.
+ * Ẩn danh mục cha phải ẩn luôn mọi danh mục con.
+ */
+function isCategoryChainActive(byId, categoryId) {
+  let current = byId.get(categoryId);
+  if (!current) return false;
+  while (current) {
+    if (!current.is_active) return false;
+    current = current.parent_id ? byId.get(current.parent_id) : null;
+  }
+  return true;
+}
+
+function activeCategoryIdSet(rows, byId) {
+  return new Set(rows.filter((row) => isCategoryChainActive(byId, row.id)).map((row) => row.id));
+}
+
 function categoryPath(rowsById, categoryId) {
   const path = [];
   let current = rowsById.get(categoryId);
@@ -332,8 +350,9 @@ function resolveStockThreshold(row) {
 /* ------------------------------------------------------------------ */
 
 export async function getCategoryTree() {
-  const rows = await repo.listCategories({ includeInactive: false });
-  return buildCategoryTree(rows);
+  const { rows, byId } = await loadCategoriesById();
+  const activeIds = activeCategoryIdSet(rows, byId);
+  return buildCategoryTree(rows.filter((row) => activeIds.has(row.id)));
 }
 
 export async function listAdminCategories() {
@@ -555,11 +574,11 @@ async function resolveCategoryFilter(categorySlug, { onlyActive }) {
   const { rows, byId } = await loadCategoriesById();
   const root = rows.find((row) => row.slug === categorySlug);
   if (!root) return { ids: [], rows, byId };
-  if (onlyActive && !root.is_active) return { ids: [], rows, byId };
+  if (onlyActive && !isCategoryChainActive(byId, root.id)) return { ids: [], rows, byId };
 
   const ids = categorySubtreeIds(rows, root.id);
   const idsActive = onlyActive
-    ? ids.filter((id) => byId.get(id)?.is_active)
+    ? ids.filter((id) => isCategoryChainActive(byId, id))
     : ids;
   return { ids: idsActive, rows, byId };
 }
@@ -572,8 +591,9 @@ export async function listProducts({ query }) {
   const page = query.page ?? 1;
   const limit = query.limit ?? 12;
 
-  const { rows: categories } = await loadCategoriesById();
-  const activeCategoryIds = categories.filter((row) => row.is_active).map((row) => row.id);
+  const { rows: categories, byId } = await loadCategoriesById();
+  const activeIds = activeCategoryIdSet(categories, byId);
+  const activeCategoryIds = [...activeIds];
   if (activeCategoryIds.length === 0) return emptyPage(page, limit);
 
   let categoryIds = activeCategoryIds;
@@ -615,25 +635,33 @@ export async function listProducts({ query }) {
  * Chỉ đọc; M03 không ghi ngược vào bảng sản phẩm.
  */
 export async function getSearchCatalog() {
-  const rows = await repo.listSearchCatalogRows();
+  const [rows, { byId }] = await Promise.all([
+    repo.listSearchCatalogRows(),
+    loadCategoriesById(),
+  ]);
   const stockMap = await fetchStockMap(collectSkus(rows));
 
-  return rows.map((row) => {
+  return rows.flatMap((row) => {
     const categories = categoryEntries(row)
-      .filter((entry) => entry.category.is_active)
+      .filter((entry) => isCategoryChainActive(byId, entry.category.id))
       .map((entry) => ({
         id: entry.category.id,
         name: entry.category.name,
         slug: entry.category.slug,
       }));
 
-    return {
-      ...mapSummary(row, stockMap),
-      description: row.description ?? null,
-      categories,
-      category_ids: categories.map((category) => category.id),
-      sku_list: activeVariants(row).map((variant) => variant.sku),
-    };
+    // Sản phẩm chỉ thuộc danh mục đang ẩn (kể cả ẩn ở cấp cha) không được lên storefront.
+    if (categories.length === 0) return [];
+
+    return [
+      {
+        ...mapSummary(row, stockMap),
+        description: row.description ?? null,
+        categories,
+        category_ids: categories.map((category) => category.id),
+        sku_list: activeVariants(row).map((variant) => variant.sku),
+      },
+    ];
   });
 }
 
@@ -756,7 +784,10 @@ export async function getProductDetail({ idOrSlug }) {
   if (!row) throw notFound('Không tìm thấy sản phẩm.');
 
   const primary = primaryCategory(row);
-  if (!primary || primary.deleted_at || !primary.is_active) {
+  if (!primary) throw notFound('Không tìm thấy sản phẩm.');
+
+  const { byId } = await loadCategoriesById();
+  if (!isCategoryChainActive(byId, primary.id)) {
     throw notFound('Không tìm thấy sản phẩm.');
   }
 

@@ -53,3 +53,48 @@ describe('GET /api/cron/campaigns', () => {
     expect(activateScheduledContent).toHaveBeenCalledTimes(1);
   });
 });
+
+const { cancelTimeoutOrders } = vi.hoisted(() => ({ cancelTimeoutOrders: vi.fn() }));
+
+vi.mock('@/modules/m05-checkout/server/service.js', () => ({ cancelTimeoutOrders }));
+
+const { GET: cancelTimeoutOrdersGET } = await import(
+  '@/app/api/cron/cancel-timeout-orders/route.js'
+);
+
+describe('GET /api/cron/cancel-timeout-orders', () => {
+  beforeEach(() => {
+    cancelTimeoutOrders.mockReset();
+    cancelTimeoutOrders.mockResolvedValue({
+      cancelled_count: 2,
+      executed_at: '2026-11-16T00:00:00.000Z',
+    });
+  });
+
+  it('từ chối request không có CRON_SECRET đúng', async () => {
+    const response = await cancelTimeoutOrdersGET(
+      new Request('https://kaido.test/api/cron/cancel-timeout-orders'),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(401);
+    expect(body.error.code).toBe('UNAUTHORIZED');
+    expect(cancelTimeoutOrders).not.toHaveBeenCalled();
+  });
+
+  it('hủy đơn quá hạn khi CRON_SECRET hợp lệ', async () => {
+    const response = await cancelTimeoutOrdersGET(
+      new Request('https://kaido.test/api/cron/cancel-timeout-orders', {
+        headers: { authorization: 'Bearer test-cron-secret' },
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data).toMatchObject({
+      job: 'cancel-timeout-orders',
+      cancelled_count: 2,
+    });
+    expect(cancelTimeoutOrders).toHaveBeenCalledTimes(1);
+  });
+});

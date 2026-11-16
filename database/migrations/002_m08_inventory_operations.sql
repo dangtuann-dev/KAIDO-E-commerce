@@ -448,7 +448,7 @@ BEGIN
     code, warehouse_id, reason, status, requires_admin_approval, approved_by, created_by
   ) VALUES (
     public.generate_document_code('ADJ'), p_warehouse_id, btrim(p_reason),
-    CASE WHEN p_auto_approve THEN 'APPROVED' ELSE 'PENDING_APPROVAL' END,
+    (CASE WHEN p_auto_approve THEN 'APPROVED' ELSE 'PENDING_APPROVAL' END)::public.document_status,
     COALESCE(p_requires_admin_approval, false),
     CASE WHEN p_auto_approve THEN p_created_by ELSE NULL END,
     p_created_by

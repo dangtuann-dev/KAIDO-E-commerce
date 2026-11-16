@@ -3,6 +3,10 @@
   "regions": ["sin1"],
   "crons": [
     {
+      "path": "/api/cron/cancel-timeout-orders",
+      "schedule": "* * * * *"
+    },
+    {
       "path": "/api/cron/campaigns",
       "schedule": "0 0 * * *"
     },

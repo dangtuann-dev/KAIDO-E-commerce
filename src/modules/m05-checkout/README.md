@@ -22,7 +22,7 @@ Tạo đơn và ghi nhận thanh toán. Vòng đời giao vận/đổi trả thu
 | `M05-F06` | Xác nhận và Đặt hàng (Place Order) | API-M05-02                                 |
 | `M05-F07` | Xử lý thanh toán trực tuyến        | API-M05-04                                 |
 | `M05-F08` | Trang xác nhận đơn hàng            | API-M05-03                                 |
-| `M05-F09` | Hủy đơn hàng tự động (Timeout)     | API-M05-05 + pg_cron cancel_timeout_orders |
+| `M05-F09` | Hủy đơn hàng tự động (Timeout)     | API-M05-05 + cron `/api/cron/cancel-timeout-orders` (pg_cron `cancel_timeout_orders`) |
 | `M05-F10` | Quản lý & tra cứu đơn của khách    | API-M05-03                                 |
 | `M05-F11` | Quản lý đơn hàng (Admin/Staff)     | API-M05-06, API-M05-07                     |
 

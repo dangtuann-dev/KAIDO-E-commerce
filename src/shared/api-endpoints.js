@@ -97,7 +97,7 @@ const endpoints = [
     summary: 'Gửi OTP qua email/SMS; hiệu lực 5 phút, tối đa 3 lần/giờ (M01-F05).',
     input: '{ email }',
     output: "{ message: 'OTP_SENT', expired_in: 300 }",
-    status: 'NOT_IMPLEMENTED',
+    status: 'IMPLEMENTED',
   },
   {
     code: 'API-M01-07',

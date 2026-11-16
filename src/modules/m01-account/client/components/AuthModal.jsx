@@ -208,13 +208,15 @@ function RegisterForm({ onDone, onSwitchMode }) {
       const payload = await registerMutation.mutateAsync({ body });
       if (payload?.access_token) {
         setSession({
-          user: payload?.user ?? {
-            id: payload?.user_id ?? '',
-            email: payload?.email ?? values.email,
-            full_name: values.full_name,
-            phone: values.phone,
-            role: 'CUSTOMER',
-          },
+          user:
+            payload?.user_info ??
+            payload?.user ?? {
+              id: payload?.user_id ?? '',
+              email: payload?.email ?? values.email,
+              full_name: values.full_name,
+              phone: values.phone,
+              role: 'CUSTOMER',
+            },
           accessToken: payload.access_token,
         });
         toast.success('Tạo tài khoản thành công. Chào mừng bạn đến với KAIDO!');
