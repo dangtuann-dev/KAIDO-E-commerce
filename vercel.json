@@ -4,7 +4,7 @@
   "crons": [
     {
       "path": "/api/cron/cancel-timeout-orders",
-      "schedule": "* * * * *"
+      "schedule": "0 4 * * *"
     },
     {
       "path": "/api/cron/campaigns",
