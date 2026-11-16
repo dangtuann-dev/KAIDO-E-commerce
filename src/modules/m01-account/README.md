@@ -2,7 +2,7 @@
 
 - **Mã SRS:** `TOY-M01`
 - **Thư mục:** `src/modules/m01-account`
-- **Trạng thái nền tảng:** khung server, handler trả `501 NOT_IMPLEMENTED`; chưa có nghiệp vụ.
+- **Trạng thái nền tảng:** đã triển khai đăng ký (cấp phiên ngay), đăng nhập/refresh/logout, hồ sơ, sổ địa chỉ (cần migration `001_m01_manage_user_address.sql`), quên mật khẩu OTP và quản trị người dùng.
 
 ## 1. Mục tiêu và phạm vi
 

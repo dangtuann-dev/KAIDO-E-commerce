@@ -310,12 +310,9 @@ BEGIN
       RAISE EXCEPTION USING ERRCODE = 'P0001', MESSAGE = 'Mỗi tài khoản tối đa 10 địa chỉ.';
     END IF;
 
+    -- Trigger enforce_address_limits tự hạ mặc định của địa chỉ cũ khi địa chỉ
+    -- mới được đánh dấu mặc định; không hạ trước ở đây (trigger BR-M01-04 sẽ chặn).
     v_is_default := v_count = 0 OR coalesce((p_data->>'is_default')::boolean, false);
-    IF v_is_default THEN
-      UPDATE public.addresses
-      SET is_default = false, updated_at = now()
-      WHERE user_id = p_user_id AND is_default AND deleted_at IS NULL;
-    END IF;
 
     INSERT INTO public.addresses (
       user_id, recipient_name, phone, province_code, province_name,
@@ -340,12 +337,7 @@ BEGIN
       RAISE EXCEPTION USING ERRCODE = 'P0001', MESSAGE = 'Không tìm thấy địa chỉ.';
     END IF;
 
-    v_is_default := coalesce((p_data->>'is_default')::boolean, false);
-    IF v_is_default THEN
-      UPDATE public.addresses
-      SET is_default = false, updated_at = now()
-      WHERE user_id = p_user_id AND id <> p_address_id AND is_default AND deleted_at IS NULL;
-    END IF;
+    v_is_default := coalesce((p_data->>'is_default')::boolean, v_address.is_default);
 
     UPDATE public.addresses
     SET recipient_name = p_data->>'recipient_name',
@@ -397,10 +389,6 @@ BEGIN
     IF NOT FOUND THEN
       RAISE EXCEPTION USING ERRCODE = 'P0001', MESSAGE = 'Không tìm thấy địa chỉ.';
     END IF;
-
-    UPDATE public.addresses
-    SET is_default = false, updated_at = now()
-    WHERE user_id = p_user_id AND id <> p_address_id AND is_default AND deleted_at IS NULL;
 
     UPDATE public.addresses
     SET is_default = true, updated_at = now()

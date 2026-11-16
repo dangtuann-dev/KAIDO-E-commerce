@@ -74,7 +74,7 @@ export default function CatalogFilters({
         name="keyword"
         type="search"
         placeholder="Ví dụ: Lego, xe đạp…"
-        defaultValue={searchParams.get('keyword') ?? ''}
+        defaultValue={searchParams.get('keyword') ?? searchParams.get('q') ?? ''}
       />
 
       {lockedCategorySlug ? null : (

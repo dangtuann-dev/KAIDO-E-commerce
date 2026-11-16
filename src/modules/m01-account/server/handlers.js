@@ -1,5 +1,4 @@
 import 'server-only';
-import { notImplementedHandler } from '@/server/http/handlers.js';
 import { REFRESH_TOKEN_COOKIE } from '@/shared/constants/auth.js';
 import {
   getRefreshTokenFromRequest,
@@ -16,6 +15,7 @@ import {
   changePassword,
   logout,
   listAdminUsers,
+  requestPasswordReset,
 } from './service.js';
 import {
   listAddresses,
@@ -25,22 +25,18 @@ import {
   setDefaultAddress,
 } from './service.js';
 
-const registerHandler = async ({ body }) => registerAccount(body);
-
-const loginHandler = async ({ body }) => {
-  const { refresh_token, refresh_expires_in, ...publicData } = await login(body);
-
-  const response = new Response(JSON.stringify({ success: true, data: publicData }), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' },
+const registerHandler = async ({ body, requestId }) => {
+  const { refresh_token, refresh_expires_in, ...publicData } = await registerAccount(body);
+  return attachRefreshTokenCookie(successResponse(publicData, { requestId }), refresh_token, {
+    maxAgeSeconds: refresh_expires_in,
   });
+};
 
-  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
-  response.headers.append(
-    'Set-Cookie',
-    `${REFRESH_TOKEN_COOKIE}=${refresh_token}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${refresh_expires_in}${secure}`,
-  );
-  return response;
+const loginHandler = async ({ body, requestId }) => {
+  const { refresh_token, refresh_expires_in, ...publicData } = await login(body);
+  return attachRefreshTokenCookie(successResponse(publicData, { requestId }), refresh_token, {
+    maxAgeSeconds: refresh_expires_in,
+  });
 };
 
 const refreshHandler = async ({ request, requestId }) => {
@@ -76,6 +72,12 @@ const logoutHandler = async () => {
 
 const profileHandler = async ({ auth }) => getProfile({ userId: auth.userId });
 
+const forgotPasswordHandler = async ({ body, request }) =>
+  requestPasswordReset({
+    email: body.email,
+    ip: request?.headers?.get?.('x-forwarded-for')?.split(',')[0]?.trim() || null,
+  });
+
 const updateProfileHandler = async ({ auth, body }) => updateProfile({ userId: auth.userId, body });
 
 const listAddressesHandler = async ({ auth }) => listAddresses({ userId: auth.userId });
@@ -102,7 +104,7 @@ export const handlers = Object.freeze({
   'API-M01-03': profileHandler,
   'API-M01-04': updateProfileHandler,
   'API-M01-05': listAddressesHandler,
-  'API-M01-06': notImplementedHandler('API-M01-06'),
+  'API-M01-06': forgotPasswordHandler,
   'API-M01-07': listAdminUsersHandler,
   'API-M01-08': createAddressHandler,
   'API-M01-09': updateAddressHandler,

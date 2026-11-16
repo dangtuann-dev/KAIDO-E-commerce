@@ -424,7 +424,8 @@ BEGIN
   INSERT INTO public.return_requests (
     order_id, user_id, reason, description, evidence_urls
   ) VALUES (
-    v_order.id, COALESCE(p_user_id, v_order.user_id), p_reason, p_description, p_evidence_urls
+    v_order.id, COALESCE(p_user_id, v_order.user_id), p_reason::public.return_reason,
+    p_description, p_evidence_urls
   )
   RETURNING * INTO v_request;
 

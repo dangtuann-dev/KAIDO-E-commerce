@@ -114,7 +114,7 @@ Giỏ guest hết hạn sau **30 ngày** không hoạt động (`GUEST_CART_TTL_
 | Hàm                         | Tham số                  | SRS     | Mục đích                                       |
 | --------------------------- | ------------------------ | ------- | ---------------------------------------------- |
 | `getCartSummaryForCheckout` | `userId, itemIds`        | M04-F06 | Snapshot giỏ đã xác thực cho M05 tạo đơn.      |
-| `clearCartAfterOrder`       | `cartId`                 | M04-F05 | Đánh dấu giỏ `CONVERTED` sau khi đặt hàng.     |
+| `clearCartAfterOrder`       | `cartId, orderedItems`   | M04-F05 | Chỉ xóa dòng đã đặt; chuyển giỏ `CONVERTED` khi không còn dòng. |
 | `mergeGuestCartIntoUser`    | `userId, guestSessionId` | M04-F08 | Gộp giỏ sau đăng nhập (dùng lại khi cần).      |
 
 `getCartSummaryForCheckout` trả summary rỗng (`items: []`, tổng 0) khi thành viên chưa có giỏ ACTIVE, và **bỏ qua** các dòng không còn mua được để M05 không bao giờ nhận giá âm/không tồn tại.

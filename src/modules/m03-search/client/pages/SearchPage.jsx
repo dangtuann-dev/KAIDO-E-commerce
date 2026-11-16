@@ -58,8 +58,11 @@ function parseFilters(searchParams) {
   const page = Number(searchParams.get('page'));
   const sort = searchParams.get('sort');
 
+  // Header dùng `keyword`; link cũ/deep-link có thể dùng `q` — nhận cả hai.
+  const keyword = searchParams.get('keyword') ?? searchParams.get('q') ?? '';
+
   return {
-    keyword: searchParams.get('keyword')?.trim().slice(0, 100) ?? '',
+    keyword: keyword.trim().slice(0, 100),
     category_id: parseCsv(searchParams.get('category_id')),
     brand_id: parseCsv(searchParams.get('brand_id')),
     age_group: parseCsv(searchParams.get('age_group')).filter((value) =>

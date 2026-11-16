@@ -22,11 +22,12 @@ export async function getCartSummaryForCheckout(userId, itemIds) {
 
 /**
  * M04-F05 — Chốt giỏ sau khi đặt hàng thành công (M05 gọi sau khi tạo đơn).
- * Giỏ chuyển sang CONVERTED và xóa toàn bộ dòng.
+ * Chỉ xóa các dòng đã đặt; giỏ chuyển CONVERTED khi không còn dòng nào.
  * @param {string} cartId
+ * @param {{ item_id: string, quantity: number }[]} orderedItems
  */
-export async function clearCartAfterOrder(cartId) {
-  return clearCartAfterOrderService(cartId);
+export async function clearCartAfterOrder(cartId, orderedItems = []) {
+  return clearCartAfterOrderService(cartId, orderedItems);
 }
 
 /**

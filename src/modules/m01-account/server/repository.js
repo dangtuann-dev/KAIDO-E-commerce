@@ -132,24 +132,86 @@ export async function revokeRefreshTokensForUser(_userId) {
 }
 
 /**
- * TODO(M01-F05) — bảng `password_reset_otps`.
+ * M01-F05 — bảng `password_reset_otps`. Đếm số lần gửi trong khung giờ để chặn spam.
  */
-export async function createPasswordResetOtp(_userId, _data) {
-  throw new NotImplementedError('M01-F05');
+export async function countPasswordResetOtpsSince(userId, sinceIso) {
+  const { count, error } = await from('password_reset_otps')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .gte('created_at', sinceIso);
+  if (error) throw fromSupabaseError(error);
+  return count ?? 0;
 }
 
 /**
- * TODO(M01-F05) — bảng `password_reset_otps`.
+ * M01-F05 — bảng `password_reset_otps`. Vô hiệu hóa mọi OTP cũ trước khi phát mã mới.
  */
-export async function findLatestPasswordResetOtp(_userId) {
-  throw new NotImplementedError('M01-F05');
+export async function consumeActivePasswordResetOtps(userId) {
+  return run(
+    from('password_reset_otps')
+      .update({ consumed_at: new Date().toISOString() })
+      .eq('user_id', userId)
+      .is('consumed_at', null)
+      .select('id'),
+  );
 }
 
 /**
- * TODO(M01-F05) — bảng `password_reset_otps`.
+ * M01-F05 — bảng `password_reset_otps`. DB chỉ lưu hash của OTP.
  */
-export async function consumePasswordResetOtp(_id) {
-  throw new NotImplementedError('M01-F05');
+export async function createPasswordResetOtp(userId, data) {
+  return run(
+    from('password_reset_otps')
+      .insert({ user_id: userId, ...data })
+      .select('id,expires_at')
+      .single(),
+  );
+}
+
+/**
+ * M01-F05 — bảng `password_reset_otps`. OTP còn hiệu lực mới nhất của người dùng.
+ */
+export async function findLatestPasswordResetOtp(userId) {
+  return run(
+    from('password_reset_otps')
+      .select('*')
+      .eq('user_id', userId)
+      .is('consumed_at', null)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  );
+}
+
+/**
+ * M01-F05 — bảng `password_reset_otps`. Đánh dấu đã dùng, trả null nếu đã dùng trước đó.
+ */
+export async function consumePasswordResetOtp(id) {
+  return run(
+    from('password_reset_otps')
+      .update({ consumed_at: new Date().toISOString() })
+      .eq('id', id)
+      .is('consumed_at', null)
+      .select('id')
+      .maybeSingle(),
+  );
+}
+
+/**
+ * M01-F05 — bảng `notifications`. Xếp OTP vào hàng đợi email (worker gửi ngoài phạm vi nền tảng).
+ */
+export async function enqueuePasswordResetOtp(userId, payload) {
+  return run(
+    from('notifications')
+      .insert({
+        user_id: userId,
+        channel: 'EMAIL',
+        template_key: 'PASSWORD_RESET_OTP',
+        payload,
+      })
+      .select('id')
+      .maybeSingle(),
+  );
 }
 
 /**
