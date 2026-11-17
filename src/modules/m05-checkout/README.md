@@ -97,7 +97,7 @@ Module khác chỉ được import `src/modules/m05-checkout/public.server.js` (
 | `/checkout?items=<cartItemId,...>`      | `CheckoutPage`          | F01–F06: gọi API-M05-01 mỗi khi đổi địa chỉ/vận chuyển/voucher/điểm, đặt hàng qua API-M05-02. |
 | `/order-success/[code]`                 | `OrderSuccessPage`      | F08–F10: poll 5s khi đơn `PENDING_PAYMENT`, hủy đơn (API-M05-05).|
 | `/checkout/payment-sandbox/[orderRef]`  | Server Component        | Chỉ mở khi `mode = sandbox`; đọc cookie refresh để dựng `auth` cho service. |
-| `/payment/vnpay-return`                 | Server Component        | `vnp_ReturnUrl`: xác thực chữ ký rồi chuyển về trang đơn.       |
+| `/payment/vnpay-return`                 | Server Component        | `vnp_ReturnUrl`: xác thực chữ ký, chốt trạng thái idempotent rồi chuyển về trang đơn. |
 | `/admin/orders`                         | `AdminOrderListPage`    | F11: lọc + phân trang server-side qua API-M05-06.                |
 | `/admin/orders/[id]`                    | `AdminOrderDetailPage`  | F11: chi tiết, lịch sử trạng thái, chuyển trạng thái theo `ORDER_TRANSITIONS`. |
 
@@ -143,8 +143,9 @@ m05-checkout/
 
 ## 12. Thanh toán VNPAY và kiểm thử
 
-- **Live:** đặt `VNPAY_TMN_CODE` + `VNPAY_HASH_SECRET` (tuỳ chọn `VNPAY_URL`, `VNPAY_RETURN_URL`, `VNPAY_IPN_URL`). Ký HMAC-SHA512 trên chuỗi `encodeURIComponent(key)=encodeURIComponent(value)` đã sắp xếp; `vnp_Amount = tổng × 100`.
+- **Live:** đặt `VNPAY_TMN_CODE` + `VNPAY_HASH_SECRET` (tuỳ chọn `VNPAY_URL`, `VNPAY_RETURN_URL`, `VNPAY_IPN_URL`). Ký HMAC-SHA512 trên chuỗi `application/x-www-form-urlencoded` đã sắp xếp khóa (dấu cách thành `+`, dùng `URLSearchParams`); `vnp_Amount = tổng × 100`.
+- **Chốt trạng thái:** IPN (API-M05-04) là kênh chính; `/payment/vnpay-return` xác thực chữ ký rồi gọi `recordPaymentResult` idempotent làm đường dự phòng — cần khi cổng không gọi được IPN (merchant demo, môi trường không public). Đơn đã `SUCCESS` không bao giờ bị hạ xuống `FAILED`.
 - **Sandbox (dev):** thiếu 2 biến trên và `NODE_ENV !== 'production'` thì `createPaymentUrl` trả `/checkout/payment-sandbox/<order_code>`; trang này (Server Component) gọi `service.getPaymentSandbox` — service tự chặn khi mode là `live`.
 - **Luồng kiểm thử tay:** thêm sản phẩm vào giỏ (M08 đã có tồn) → `/cart` → “Thanh toán” → điền địa chỉ → chọn VNPAY → trang mô phỏng → “Thanh toán thành công” → IPN `RspCode=00`, đơn chuyển `PENDING` và `payment_status=SUCCESS` → kiểm tra `/account/orders` và `/admin/orders`.
-- **Tự động:** `npx vitest run src/modules/m05-checkout` chạy 20 test hợp đồng + Zod + HMAC/IPN (không cần DB).
+- **Tự động:** `npx vitest run src/modules/m05-checkout` chạy bộ test hợp đồng + Zod + HMAC/IPN + `recordPaymentResult` (không cần DB).
 - `getOrderDetail` trả thêm `payment_info.payment_mode` để UI chỉ hiện lối vào trang mô phỏng khi đang ở sandbox.

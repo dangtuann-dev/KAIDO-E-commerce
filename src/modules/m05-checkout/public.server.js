@@ -152,8 +152,9 @@ export async function recordPaymentResult(input) {
 
   const isSuccess = input.status === PAYMENT_STATUS.SUCCESS;
 
-  // Idempotent: IPN gửi lặp lại không được ghi đè hay tạo thêm giao dịch.
-  if (order.payment_status === PAYMENT_STATUS.SUCCESS && isSuccess) {
+  // Idempotent: IPN/Return gửi lặp lại không ghi đè hay tạo thêm giao dịch;
+  // đơn đã thanh toán cũng không bị hạ xuống FAILED khi kết quả thất bại về trễ (race IPN/Return).
+  if (order.payment_status === PAYMENT_STATUS.SUCCESS) {
     return {
       order_id: order.id,
       order_code: order.order_code,
