@@ -186,6 +186,16 @@ const PAYMENT_GATEWAY_ENV_KEYS = Object.freeze({
 });
 
 /**
+ * Khóa bắt buộc để một cổng thanh toán được coi là đã cấu hình.
+ * ZALOPAY dùng appid + key1 (tạo đơn) + key2 (callback/redirect checksum).
+ */
+const PAYMENT_GATEWAY_REQUIRED_KEYS = Object.freeze({
+  VNPAY: Object.freeze(['tmnCode', 'hashSecret']),
+  MOMO: Object.freeze(['partnerCode', 'accessKey', 'hashSecret']),
+  ZALOPAY: Object.freeze(['appId', 'key1', 'key2']),
+});
+
+/**
  * Đọc cấu hình cổng thanh toán ở dạng thô (có thể thiếu khóa).
  * @param {'VNPAY' | 'MOMO' | 'ZALOPAY'} provider
  * @returns {{ provider: string, values: Record<string, string | undefined>, configured: boolean }}
@@ -201,7 +211,7 @@ export function getPaymentGatewayEnv(provider) {
     values[field] = emptyToUndefined(process.env[key]);
   }
 
-  const required = provider === 'VNPAY' ? ['tmnCode', 'hashSecret'] : ['hashSecret'];
+  const required = PAYMENT_GATEWAY_REQUIRED_KEYS[provider] ?? [];
   const configured = required.every((field) => Boolean(values[field]));
 
   return { provider, values, configured };

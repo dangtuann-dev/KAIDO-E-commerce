@@ -829,6 +829,21 @@ const endpoints = [
     output: '{ total, items: [OrderSummary] }',
     status: 'IMPLEMENTED',
   },
+  {
+    code: 'API-M05-09',
+    module: 'M05',
+    name: 'ZaloPay Callback',
+    method: 'POST',
+    path: '/api/v1/payments/zalopay/callback',
+    access: 'public',
+    roles: [],
+    operation: 'zalopayCallback',
+    summary:
+      'Webhook ZaloPay: kiểm tra HMAC-SHA256 (Key2), idempotency, cập nhật giao dịch (M05-F07).',
+    input: '{ data, mac, type }',
+    output: '{ return_code, return_message }',
+    status: 'IMPLEMENTED',
+  },
 
   // ===== TOY-M06: Đơn hàng và giao vận =====
   {

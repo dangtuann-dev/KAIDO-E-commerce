@@ -2,7 +2,7 @@
 
 - **Mã SRS:** `TOY-M05`
 - **Thư mục:** `src/modules/m05-checkout`
-- **Trạng thái:** đã triển khai đầy đủ nghiệp vụ F01–F11 (server, UI, VNPAY live + sandbox mô phỏng).
+- **Trạng thái:** đã triển khai đầy đủ nghiệp vụ F01–F11 (server, UI, VNPAY live + sandbox mô phỏng, Cổng ZaloPay sandbox).
 
 ## 1. Mục tiêu và phạm vi
 
@@ -39,6 +39,7 @@ Tổng: **11 FR** theo SRS (không đổi mã SRS).
 | `API-M05-05` | POST   | `/api/v1/orders/[orderRef]/cancel` | auth   |
 | `API-M05-06` | GET    | `/api/v1/admin/orders`             | role   |
 | `API-M05-07` | PUT    | `/api/v1/admin/orders/[id]/status` | role   |
+| `API-M05-09` | POST   | `/api/v1/payments/zalopay/callback` | public |
 
 Registry đầy đủ tại `src/shared/api-endpoints.js`; route được sinh bởi `npm run gen:routes`.
 
@@ -98,6 +99,7 @@ Module khác chỉ được import `src/modules/m05-checkout/public.server.js` (
 | `/order-success/[code]`                 | `OrderSuccessPage`      | F08–F10: poll 5s khi đơn `PENDING_PAYMENT`, hủy đơn (API-M05-05).|
 | `/checkout/payment-sandbox/[orderRef]`  | Server Component        | Chỉ mở khi `mode = sandbox`; đọc cookie refresh để dựng `auth` cho service. |
 | `/payment/vnpay-return`                 | Server Component        | `vnp_ReturnUrl`: xác thực chữ ký, chốt trạng thái idempotent rồi chuyển về trang đơn. |
+| `/payment/zalopay-return`               | Server Component        | `embed_data.redirecturl`: xác thực `checksum` (Key2), chốt trạng thái idempotent rồi chuyển về trang đơn. |
 | `/admin/orders`                         | `AdminOrderListPage`    | F11: lọc + phân trang server-side qua API-M05-06.                |
 | `/admin/orders/[id]`                    | `AdminOrderDetailPage`  | F11: chi tiết, lịch sử trạng thái, chuyển trạng thái theo `ORDER_TRANSITIONS`. |
 
@@ -112,7 +114,7 @@ m05-checkout/
 │   ├── constants.js        # ngưỡng COD, timeout 20 phút, số coupon/đơn
 │   ├── handlers.js         # map API-M05-xx -> service
 │   ├── repository.js       # truy vấn Supabase (orders, order_items, payment_transactions…)
-│   ├── service.js          # F01–F11 + IPN VNPAY + sandbox
+│   ├── service.js          # F01–F11 + IPN VNPAY + callback ZaloPay + sandbox
 │   ├── validation.js       # Zod schema theo API
 │   └── __tests__/module.test.js
 └── client/
@@ -141,11 +143,14 @@ m05-checkout/
 - `client/hooks/`: một hook TanStack Query cho mỗi API-M05-xx; `client/services/`: một hàm cho mỗi API, đọc path từ `src/shared/api-endpoints.js`.
 - `CheckoutPage` giữ state form và gọi lại API-M05-01 (debounce 450ms) thay vì tự tính tiền ở client.
 
-## 12. Thanh toán VNPAY và kiểm thử
+## 12. Thanh toán trực tuyến (VNPAY, ZaloPay) và kiểm thử
 
-- **Live:** đặt `VNPAY_TMN_CODE` + `VNPAY_HASH_SECRET` (tuỳ chọn `VNPAY_URL`, `VNPAY_RETURN_URL`, `VNPAY_IPN_URL`). Ký HMAC-SHA512 trên chuỗi `application/x-www-form-urlencoded` đã sắp xếp khóa (dấu cách thành `+`, dùng `URLSearchParams`); `vnp_Amount = tổng × 100`.
+- **VNPAY live:** đặt `VNPAY_TMN_CODE` + `VNPAY_HASH_SECRET` (tuỳ chọn `VNPAY_URL`, `VNPAY_RETURN_URL`, `VNPAY_IPN_URL`). Ký HMAC-SHA512 trên chuỗi `application/x-www-form-urlencoded` đã sắp xếp khóa (dấu cách thành `+`, dùng `URLSearchParams`); `vnp_Amount = tổng × 100`.
 - **Chốt trạng thái:** IPN (API-M05-04) là kênh chính; `/payment/vnpay-return` xác thực chữ ký rồi gọi `recordPaymentResult` idempotent làm đường dự phòng — cần khi cổng không gọi được IPN (merchant demo, môi trường không public). Đơn đã `SUCCESS` không bao giờ bị hạ xuống `FAILED`.
-- **Sandbox (dev):** thiếu 2 biến trên và `NODE_ENV !== 'production'` thì `createPaymentUrl` trả `/checkout/payment-sandbox/<order_code>`; trang này (Server Component) gọi `service.getPaymentSandbox` — service tự chặn khi mode là `live`.
-- **Luồng kiểm thử tay:** thêm sản phẩm vào giỏ (M08 đã có tồn) → `/cart` → “Thanh toán” → điền địa chỉ → chọn VNPAY → trang mô phỏng → “Thanh toán thành công” → IPN `RspCode=00`, đơn chuyển `PENDING` và `payment_status=SUCCESS` → kiểm tra `/account/orders` và `/admin/orders`.
-- **Tự động:** `npx vitest run src/modules/m05-checkout` chạy bộ test hợp đồng + Zod + HMAC/IPN + `recordPaymentResult` (không cần DB).
+- **VNPAY sandbox (dev):** thiếu 2 biến trên và `NODE_ENV !== 'production'` thì `createPaymentUrl` trả `/checkout/payment-sandbox/<order_code>`; trang này (Server Component) gọi `service.getPaymentSandbox` — service tự chặn khi mode là `live`.
+- **ZaloPay (Cổng ZaloPay cho web):** đặt `ZALOPAY_APP_ID`, `ZALOPAY_KEY1`, `ZALOPAY_KEY2` (tuỳ chọn `ZALOPAY_ENDPOINT`, mặc định sandbox `https://sb-openapi.zalopay.vn/v2/create`). `app_trans_id = yymmdd(GMT+7)_appid_<mã đơn>`; tạo đơn ký HMAC-SHA256 (Key1) trên `app_id|app_trans_id|app_user|amount|app_time|embed_data|item`, sau đó redirect khách sang `order_url`.
+- **ZaloPay callback:** API-M05-09 kiểm tra `mac = HMAC_SHA256(data, Key2)`, so số tiền với đơn rồi gọi `recordPaymentResult`; trả `{ return_code: 1 }` khi đã xử lý để cổng ngừng retry. `/payment/zalopay-return` xác thực `checksum` (`appid|apptransid|pmcid|bankcode|amount|discountamount|status`, Key2) và chốt trạng thái dự phòng khi callback chưa về.
+- **Thẻ test sandbox ZaloPay:** ATM SBI `9704540000000062` (chủ thẻ `NGUYEN VAN A`, ngày phát hành `1018`) hoặc Visa `4111111111111111` (CVV `123`).
+- **Luồng kiểm thử tay:** thêm sản phẩm vào giỏ (M08 đã có tồn) → `/cart` → “Thanh toán” → điền địa chỉ → chọn cổng → thanh toán trên trang cổng → callback/redirect chốt đơn `PENDING` + `payment_status=SUCCESS` → kiểm tra `/account/orders` và `/admin/orders`.
+- **Tự động:** `npx vitest run src/modules/m05-checkout src/server/integrations/payment` chạy bộ test hợp đồng + Zod + HMAC/IPN + chữ ký ZaloPay + `recordPaymentResult` (không cần DB).
 - `getOrderDetail` trả thêm `payment_info.payment_mode` để UI chỉ hiện lối vào trang mô phỏng khi đang ở sandbox.

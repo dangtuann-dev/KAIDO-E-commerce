@@ -34,6 +34,11 @@ import {
   getVnpaySettings,
   verifyIpn,
 } from '@/server/integrations/payment/vnpay.js';
+import {
+  createOrder as createZalopayOrder,
+  isZalopaySandbox,
+  verifyCallback as verifyZalopayCallback,
+} from '@/server/integrations/payment/zalopay.js';
 import { clearCartAfterOrder, getCartSummaryForCheckout } from '@/modules/m04-cart/public.server.js';
 import {
   checkAvailability,
@@ -43,6 +48,7 @@ import {
 import { CouponService } from '@/modules/m09-marketing/public.server.js';
 import * as LoyaltyService from '@/modules/m07-loyalty/public.server.js';
 import * as repo from './repository.js';
+import { recordPaymentResult } from '../public.server.js';
 import {
   COD_CONFIRMATION_THRESHOLD_VND,
   MAX_COUPONS_PER_ORDER,
@@ -366,6 +372,16 @@ function resolveMethodAvailability() {
         mode: sandboxAllowed ? 'sandbox' : 'live',
         sandbox: sandboxAllowed,
         note: sandboxAllowed && !gatewayStatus.VNPAY ? 'Chế độ mô phỏng (chưa cấu hình cổng thật).' : null,
+      };
+    }
+
+    if (option.method === PAYMENT_METHODS.ZALOPAY) {
+      return {
+        ...option,
+        available: Boolean(gatewayStatus.ZALOPAY),
+        mode: 'live',
+        sandbox: false,
+        note: gatewayStatus.ZALOPAY && isZalopaySandbox() ? 'Cổng ZaloPay sandbox (appid 554).' : null,
       };
     }
 
@@ -803,6 +819,21 @@ function paymentRedirectPath(order) {
 async function initiateOnlinePaymentFor(order, { ipAddress } = {}) {
   const availability = await selectPaymentMethod(order.payment_method);
 
+  if (order.payment_method === PAYMENT_METHODS.ZALOPAY) {
+    const zalopay = await createZalopayOrder({
+      orderRef: order.order_code,
+      amountVnd: amountOf(order.total_amount),
+      description: `Thanh toan don hang ${order.order_code}`,
+      appUser: order.user_id ?? 'kaido',
+    });
+    return {
+      paymentUrl: zalopay.paymentUrl,
+      mode: zalopay.mode,
+      sandbox: zalopay.sandbox,
+      availability,
+    };
+  }
+
   if (order.payment_method !== PAYMENT_METHODS.VNPAY) {
     throw serviceUnavailable(
       `${paymentMethodLabel(order.payment_method)} đang được hoàn thiện. Vui lòng chọn thanh toán khi nhận hàng (COD).`,
@@ -1095,7 +1126,9 @@ export async function placeOrder({ auth, body, request }) {
       paymentMode = initiated.mode;
     } catch (error) {
       // Đơn đã tạo và giữ tồn: trả về để khách thử thanh toán lại từ trang đơn hàng.
-      paymentMode = error?.details?.reason === 'VNPAY_NOT_CONFIGURED' ? 'unavailable' : 'error';
+      paymentMode = /_NOT_CONFIGURED$/.test(String(error?.details?.reason ?? ''))
+        ? 'unavailable'
+        : 'error';
     }
   }
 
@@ -1267,6 +1300,55 @@ export async function handleVnpayIpn(ctx = {}) {
   return vnpayResponse('00', 'Confirm Success');
 }
 
+function zalopayResponse(returnCode, message) {
+  return new Response(JSON.stringify({ return_code: returnCode, return_message: message }), {
+    status: 200,
+    headers: { 'content-type': 'application/json; charset=utf-8' },
+  });
+}
+
+/**
+ * M05-F07 — Callback ZaloPay idempotent (API-M05-09).
+ * Đã xử lý xong (kể cả thanh toán thất bại) thì trả return_code=1 để ZaloPay ngừng retry;
+ * lỗi cấu hình/đơn không khớp trả mã âm để cổng gửi lại.
+ */
+export async function handleZalopayCallback(ctx = {}) {
+  let verified;
+  try {
+    verified = await verifyZalopayCallback({ body: ctx.body });
+  } catch (error) {
+    if (error?.code === ERROR_CODES.SERVICE_UNAVAILABLE) {
+      return zalopayResponse(0, 'Gateway not configured');
+    }
+    throw error;
+  }
+
+  if (!verified.valid) {
+    return zalopayResponse(-1, 'Invalid mac');
+  }
+
+  const order = await repo.findOrderByRef(verified.orderRef);
+  if (!order) {
+    return zalopayResponse(-2, 'Order not found');
+  }
+
+  if (amountOf(order.total_amount) !== amountOf(verified.amountVnd)) {
+    return zalopayResponse(-3, 'Invalid amount');
+  }
+
+  await recordPaymentResult({
+    orderRef: order.order_code,
+    provider: PAYMENT_METHODS.ZALOPAY,
+    providerTransactionId: verified.transactionRef,
+    amountVnd: amountOf(order.total_amount),
+    status: verified.isSuccess ? PAYMENT_STATUS.SUCCESS : PAYMENT_STATUS.FAILED,
+    payload: verified.raw,
+    note: `ZaloPay callback xác nhận (type ${verified.type ?? 'n/a'})`,
+  });
+
+  return zalopayResponse(1, 'success');
+}
+
 /* ------------------------------------------------------------------ */
 /* M05-F08 — Dữ liệu trang đặt hàng thành công                        */
 /* ------------------------------------------------------------------ */
@@ -1305,6 +1387,7 @@ export async function getOrderSuccess({ auth, params }) {
  */
 function resolvePaymentMode(paymentMethod) {
   if (!isOnlinePayment(paymentMethod)) return 'cod';
+  if (paymentMethod === PAYMENT_METHODS.ZALOPAY) return 'live';
   try {
     return getVnpaySettings().mode;
   } catch {

@@ -5,6 +5,7 @@ import * as service from './service.js';
  * [SERVER] M05 — handler map theo registry API.
  * Mỗi handler nhận ctx của withApi và ủy quyền cho service.
  * API-M05-04 trả về Response thô đúng chuẩn VNPAY ({ RspCode, Message }),
+ * API-M05-09 trả về Response thô đúng chuẩn ZaloPay ({ return_code, return_message }),
  * không bọc envelope chung.
  */
 export const handlers = Object.freeze({
@@ -25,4 +26,5 @@ export const handlers = Object.freeze({
   'API-M05-07': (ctx) =>
     service.updateOrderStatus({ auth: ctx.auth, params: ctx.params, body: ctx.body }), // M05-F11
   'API-M05-08': (ctx) => service.listCustomerOrders({ auth: ctx.auth, query: ctx.query }), // M06-F01, F02
+  'API-M05-09': (ctx) => service.handleZalopayCallback({ body: ctx.body }), // M05-F07
 });
