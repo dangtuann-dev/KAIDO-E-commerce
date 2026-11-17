@@ -32,6 +32,7 @@ const SANDBOX_HASH_SECRET = 'kaido-vnpay-sandbox-secret';
 const SANDBOX_PAYMENT_PATH = '/checkout/payment-sandbox';
 const VNPAY_TIME_OFFSET_MS = 7 * 60 * 60 * 1000;
 const MAX_ORDER_INFO_LENGTH = 250;
+let warnedProductionSandbox = false;
 
 function unavailable(message, details) {
   return new AppError(ERROR_CODES.SERVICE_UNAVAILABLE, message, { details });
@@ -67,6 +68,13 @@ export function getVnpaySettings() {
     throw unavailable(
       'Cổng thanh toán VNPAY chưa được cấu hình. Vui lòng chọn thanh toán khi nhận hàng (COD).',
       { reason: 'VNPAY_NOT_CONFIGURED', provider: 'VNPAY' },
+    );
+  }
+
+  if (process.env.NODE_ENV === 'production' && !warnedProductionSandbox) {
+    warnedProductionSandbox = true;
+    console.warn(
+      '[VNPAY] PAYMENT_SANDBOX_DEMO=true trên production: thanh toán là mô phỏng, KHÔNG dùng cho giao dịch thật.',
     );
   }
 
@@ -115,15 +123,18 @@ function formatVnpayTime(date = new Date()) {
 }
 
 /**
- * Chuỗi canonical VNPAY: sắp xếp khóa tăng dần, encode từng khóa và giá trị.
+ * Chuỗi canonical VNPAY: sắp xếp khóa tăng dần, encode theo chuẩn
+ * application/x-www-form-urlencoded (dấu cách → '+') như sample chính thức của VNPAY.
+ * Lưu ý: encodeURIComponent sẽ ra %20 và bị cổng báo "Sai chữ ký" khi OrderInfo có dấu cách.
  * @param {Record<string, string>} params
  */
 function buildCanonicalString(params) {
-  return Object.keys(params)
+  const search = new URLSearchParams();
+  Object.keys(params)
     .filter((key) => params[key] !== undefined && params[key] !== null && params[key] !== '')
     .sort()
-    .map((key) => `${encodeURIComponent(key)}=${encodeURIComponent(String(params[key]))}`)
-    .join('&');
+    .forEach((key) => search.append(key, String(params[key])));
+  return search.toString();
 }
 
 /**
