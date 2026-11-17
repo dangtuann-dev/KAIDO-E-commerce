@@ -196,6 +196,34 @@ const PAYMENT_GATEWAY_REQUIRED_KEYS = Object.freeze({
 });
 
 /**
+ * Tài khoản nhận chuyển khoản ngân hàng (M05-F04/F07).
+ * Thiếu bankBin/accountNo/accountName thì phương thức coi như chưa cấu hình;
+ * webhookSecret là tùy chọn — không có thì chỉ xác nhận tay ở trang admin.
+ */
+const BANK_TRANSFER_ENV_KEYS = Object.freeze({
+  bankBin: 'BANK_TRANSFER_BANK_BIN',
+  bankName: 'BANK_TRANSFER_BANK_NAME',
+  accountNo: 'BANK_TRANSFER_ACCOUNT_NO',
+  accountName: 'BANK_TRANSFER_ACCOUNT_NAME',
+  webhookSecret: 'BANK_TRANSFER_WEBHOOK_SECRET',
+  timeoutMinutes: 'BANK_TRANSFER_TIMEOUT_MINUTES',
+});
+
+/**
+ * Đọc cấu hình nhận chuyển khoản ở dạng thô (có thể thiếu khóa).
+ * @returns {{ values: Record<string, string | undefined>, configured: boolean }}
+ */
+export function getBankTransferEnv() {
+  const values = {};
+  for (const [field, key] of Object.entries(BANK_TRANSFER_ENV_KEYS)) {
+    values[field] = emptyToUndefined(process.env[key]);
+  }
+
+  const configured = Boolean(values.bankBin && values.accountNo && values.accountName);
+  return { values, configured };
+}
+
+/**
  * Đọc cấu hình cổng thanh toán ở dạng thô (có thể thiếu khóa).
  * @param {'VNPAY' | 'MOMO' | 'ZALOPAY'} provider
  * @returns {{ provider: string, values: Record<string, string | undefined>, configured: boolean }}
@@ -224,6 +252,7 @@ export function getPaymentGatewayEnv(provider) {
 export function getPaymentGatewayStatus() {
   return {
     COD: true,
+    BANK_TRANSFER: getBankTransferEnv().configured,
     VNPAY: getPaymentGatewayEnv('VNPAY').configured,
     MOMO: getPaymentGatewayEnv('MOMO').configured,
     ZALOPAY: getPaymentGatewayEnv('ZALOPAY').configured,

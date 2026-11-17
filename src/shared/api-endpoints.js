@@ -844,6 +844,36 @@ const endpoints = [
     output: '{ return_code, return_message }',
     status: 'IMPLEMENTED',
   },
+  {
+    code: 'API-M05-10',
+    module: 'M05',
+    name: 'Xác nhận đã nhận chuyển khoản (Admin)',
+    method: 'POST',
+    path: '/api/v1/admin/orders/[id]/payment-confirm',
+    access: 'role',
+    roles: ['ADMIN', 'STAFF'],
+    operation: 'confirmBankTransferPayment',
+    summary:
+      'Nhân viên xác nhận tiền chuyển khoản đã vào tài khoản; ghi nhận thanh toán idempotent (M05-F07, M05-F11).',
+    input: '{ reference_code?, note? }',
+    output: '{ order_code, order_status, payment_status, updated }',
+    status: 'IMPLEMENTED',
+  },
+  {
+    code: 'API-M05-11',
+    module: 'M05',
+    name: 'Webhook chuyển khoản ngân hàng',
+    method: 'POST',
+    path: '/api/v1/payments/bank/webhook',
+    access: 'public',
+    roles: [],
+    operation: 'bankTransferWebhook',
+    summary:
+      'SePay/Casso báo tiền vào: khớp mã đơn trong nội dung + số tiền rồi cập nhật thanh toán (M05-F07).',
+    input: '{ content, transferAmount, transferType, referenceCode }',
+    output: '{ success, message, order_code? }',
+    status: 'IMPLEMENTED',
+  },
 
   // ===== TOY-M06: Đơn hàng và giao vận =====
   {

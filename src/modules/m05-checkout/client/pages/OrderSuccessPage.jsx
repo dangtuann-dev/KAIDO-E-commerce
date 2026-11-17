@@ -16,7 +16,7 @@ import EmptyState from '@/shared/ui/empty-state.jsx';
 import Modal from '@/shared/ui/modal.jsx';
 import Skeleton from '@/shared/ui/skeleton.jsx';
 import { ORDER_STATUS } from '@/shared/constants/order-status.js';
-import { PAYMENT_STATUS } from '@/shared/constants/payment.js';
+import { PAYMENT_METHODS, PAYMENT_STATUS } from '@/shared/constants/payment.js';
 import { ERROR_CODES } from '@/shared/constants/error-codes.js';
 import OrderSuccessCard from '../components/OrderSuccessCard.jsx';
 import OrderTrackingTimeline from '../components/OrderTrackingTimeline.jsx';
@@ -105,12 +105,19 @@ export default function OrderSuccessPage() {
     return ['KAIDO sẽ liên hệ xác nhận đơn trong thời gian sớm nhất.'];
   }, [order]);
 
-  const sandboxHref =
-    paymentInfo?.payment_mode === 'sandbox' &&
-    order?.status === ORDER_STATUS.PENDING_PAYMENT &&
-    !order?.is_paid
+  const isPendingPayment =
+    order?.status === ORDER_STATUS.PENDING_PAYMENT && !order?.is_paid;
+  const paymentHref = !isPendingPayment
+    ? null
+    : paymentInfo?.payment_mode === 'sandbox'
       ? `/checkout/payment-sandbox/${encodeURIComponent(order.order_code)}`
-      : null;
+      : paymentInfo?.method === PAYMENT_METHODS.BANK_TRANSFER
+        ? `/checkout/bank-transfer/${encodeURIComponent(order.order_code)}`
+        : null;
+  const paymentLabel =
+    paymentInfo?.payment_mode === 'sandbox'
+      ? 'Thanh toán ngay (mô phỏng)'
+      : 'Xem mã QR chuyển khoản';
 
   async function submitCancel() {
     if (reason.trim().length < CANCEL_REASON_MIN_LENGTH) {
@@ -201,7 +208,8 @@ export default function OrderSuccessPage() {
         nextSteps={nextSteps}
         cancelling={cancelMutation.isPending}
         onCancel={() => setCancelOpen(true)}
-        sandboxHref={sandboxHref}
+        paymentHref={paymentHref}
+        paymentLabel={paymentLabel}
       />
 
       <OrderItemsList items={detail?.order_items ?? []} />

@@ -98,3 +98,14 @@ export function updateOrderStatus({ id, body } = {}) {
   const endpoint = getApiEndpoint('API-M05-07');
   return api.put(resolveEndpointPath(endpoint.path, { id }), body);
 }
+
+/**
+ * API-M05-10 — Xác nhận đã nhận chuyển khoản (Admin)
+ * Nhân viên đối chiếu sao kê rồi đánh dấu đơn đã thanh toán; ghi nhận idempotent.
+ * POST /api/v1/admin/orders/[id]/payment-confirm · quyền: vai trò ADMIN, STAFF
+ * @param {{ id: string, body?: { reference_code?: string, note?: string } }} input
+ */
+export function confirmBankTransferPayment({ id, body } = {}) {
+  const endpoint = getApiEndpoint('API-M05-10');
+  return api.post(resolveEndpointPath(endpoint.path, { id }), body ?? {});
+}

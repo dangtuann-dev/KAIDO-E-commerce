@@ -5,7 +5,7 @@
  * SRS: M05 | API/FR: M05-F01, M05-F03, M05-F04, M05-F05, M05-F06, API-M05-01, API-M05-02
  * BR: BR-M05-01 (phí ship theo tỉnh), BR-M05-02 (timeout 20 phút), BR-M05-03 (COD ngưỡng lớn)
  * Route: /checkout?items=<cartItemId,...> — do M04 chuyển sang sau khi giữ dòng.
- * Render: Client Component (tương tác). Chỉ COD/VNPAY/MoMo/ZaloPay, không có form thẻ.
+ * Render: Client Component (tương tác). COD/chuyển khoản VietQR/VNPAY/MoMo/ZaloPay, không có form thẻ.
  */
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
@@ -36,6 +36,7 @@ import { usePlaceOrder } from '../hooks/use-place-order.js';
 const MAX_ITEM_IDS = 50;
 const VOUCHER_PATTERN = /^[A-Z0-9]{4,20}$/;
 const DEFAULT_PAYMENT_TIMEOUT_MINUTES = 20;
+const DEFAULT_BANK_TRANSFER_TIMEOUT_MINUTES = 60;
 const DEFAULT_SHIPPING_METHOD = 'STANDARD';
 
 const EMPTY_ADDRESS = Object.freeze({
@@ -183,7 +184,9 @@ function CheckoutContent() {
   // Server trả về phương thức vận chuyển đã áp dụng (fallback khi tỉnh không hỗ trợ lựa chọn).
   const effectiveShippingMethod = summary?.shipping_method ?? shippingMethod;
   const paymentTimeoutMinutes =
-    summary?.payment_timeout_minutes ?? DEFAULT_PAYMENT_TIMEOUT_MINUTES;
+    effectivePaymentMethod === PAYMENT_METHODS.BANK_TRANSFER
+      ? summary?.bank_transfer_timeout_minutes ?? DEFAULT_BANK_TRANSFER_TIMEOUT_MINUTES
+      : summary?.payment_timeout_minutes ?? DEFAULT_PAYMENT_TIMEOUT_MINUTES;
   const pointsMultiple = BUSINESS_RULES.LOYALTY.REDEEM_POINT_MULTIPLE;
 
   function handleAddressChange(field, value) {
@@ -372,6 +375,7 @@ function CheckoutContent() {
               onChange={setPaymentMethod}
               total={summary?.total_amount ?? 0}
               codThreshold={summary?.cod_confirmation_threshold ?? 0}
+              timeoutMinutes={paymentTimeoutMinutes}
               disabled={placeMutation.isPending}
             />
           </div>

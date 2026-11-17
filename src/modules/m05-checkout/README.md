@@ -2,7 +2,7 @@
 
 - **Mã SRS:** `TOY-M05`
 - **Thư mục:** `src/modules/m05-checkout`
-- **Trạng thái:** đã triển khai đầy đủ nghiệp vụ F01–F11 (server, UI, VNPAY live + sandbox mô phỏng, Cổng ZaloPay sandbox).
+- **Trạng thái:** đã triển khai đầy đủ nghiệp vụ F01–F11 (server, UI, VNPAY live + sandbox mô phỏng, Cổng ZaloPay sandbox, chuyển khoản VietQR + webhook/admin xác nhận).
 
 ## 1. Mục tiêu và phạm vi
 
@@ -20,7 +20,7 @@ Tạo đơn và ghi nhận thanh toán. Vòng đời giao vận/đổi trả thu
 | `M05-F04` | Lựa chọn phương thức thanh toán    | API-M05-02                                 |
 | `M05-F05` | Áp dụng mã giảm giá & điểm thưởng  | API-M05-01                                 |
 | `M05-F06` | Xác nhận và Đặt hàng (Place Order) | API-M05-02                                 |
-| `M05-F07` | Xử lý thanh toán trực tuyến        | API-M05-04                                 |
+| `M05-F07` | Xử lý thanh toán trực tuyến        | API-M05-04, API-M05-09, API-M05-10, API-M05-11 |
 | `M05-F08` | Trang xác nhận đơn hàng            | API-M05-03                                 |
 | `M05-F09` | Hủy đơn hàng tự động (Timeout)     | API-M05-05 + cron `/api/cron/cancel-timeout-orders` (pg_cron `cancel_timeout_orders`) |
 | `M05-F10` | Quản lý & tra cứu đơn của khách    | API-M05-03                                 |
@@ -39,7 +39,10 @@ Tổng: **11 FR** theo SRS (không đổi mã SRS).
 | `API-M05-05` | POST   | `/api/v1/orders/[orderRef]/cancel` | auth   |
 | `API-M05-06` | GET    | `/api/v1/admin/orders`             | role   |
 | `API-M05-07` | PUT    | `/api/v1/admin/orders/[id]/status` | role   |
+| `API-M05-08` | GET    | `/api/v1/orders/my`                | auth   |
 | `API-M05-09` | POST   | `/api/v1/payments/zalopay/callback` | public |
+| `API-M05-10` | POST   | `/api/v1/admin/orders/[id]/payment-confirm` | role |
+| `API-M05-11` | POST   | `/api/v1/payments/bank/webhook`    | public |
 
 Registry đầy đủ tại `src/shared/api-endpoints.js`; route được sinh bởi `npm run gen:routes`.
 
@@ -51,6 +54,7 @@ Registry đầy đủ tại `src/shared/api-endpoints.js`; route được sinh b
 - `order_status_history`
 
 Trạng thái dùng enum thống nhất 13 giá trị (BR-M06-01). Snapshot người nhận/giá tại thời điểm đặt (BR-M05-05); `payment_transactions` chống trùng bằng `idempotency_key`.
+`payment_method` có thêm giá trị `BANK_TRANSFER` — đã có sẵn trong `schema.sql`, DB đang chạy cần áp migration `database/migrations/003_m05_bank_transfer_payment_method.sql`.
 
 ## 5. Hợp đồng public.server.js
 
@@ -84,9 +88,9 @@ Module khác chỉ được import `src/modules/m05-checkout/public.server.js` (
 | Component               | Vai trò                                                                 |
 | ----------------------- | ----------------------------------------------------------------------- |
 | `CheckoutShippingForm`  | Người nhận + địa chỉ 2 cấp Tỉnh → Xã (Blueprint §3.4 thể hiện ở form), chọn vận chuyển. |
-| `PaymentMethodSelector` | Chỉ COD/VNPAY/MoMo/ZaloPay, badge “Sắp có”/“môi trường mô phỏng”; không có form thẻ (SYS-NFR-04). |
+| `PaymentMethodSelector` | COD/VNPAY/MoMo/ZaloPay/chuyển khoản VietQR, badge “Sắp có”/“môi trường mô phỏng”; không có form thẻ (SYS-NFR-04). |
 | `OrderSummarySidebar`   | Tóm tắt dòng hàng, phí ship, voucher, điểm thưởng, nút vàng `accent` “Đặt hàng”. |
-| `OrderSuccessCard`      | Xác nhận đơn + đếm ngược hạn thanh toán 20 phút (BR-M05-02).             |
+| `OrderSuccessCard`      | Xác nhận đơn + đếm ngược hạn thanh toán (20 phút; chuyển khoản mặc định 60 phút). |
 | `OrderTrackingTimeline` | Timeline trạng thái 13 giá trị (BR-M06-01), dùng lại được ở M06.         |
 | `AdminOrderTable`       | Bảng đơn có lọc trạng thái/từ khóa/khoảng ngày + chip đếm theo trạng thái. |
 | `PaymentSandboxPanel`   | Chỉ dev: giả lập cổng VNPAY, gửi IPN đã ký lên API-M05-04.               |
@@ -98,10 +102,11 @@ Module khác chỉ được import `src/modules/m05-checkout/public.server.js` (
 | `/checkout?items=<cartItemId,...>`      | `CheckoutPage`          | F01–F06: gọi API-M05-01 mỗi khi đổi địa chỉ/vận chuyển/voucher/điểm, đặt hàng qua API-M05-02. |
 | `/order-success/[code]`                 | `OrderSuccessPage`      | F08–F10: poll 5s khi đơn `PENDING_PAYMENT`, hủy đơn (API-M05-05).|
 | `/checkout/payment-sandbox/[orderRef]`  | Server Component        | Chỉ mở khi `mode = sandbox`; đọc cookie refresh để dựng `auth` cho service. |
+| `/checkout/bank-transfer/[orderRef]`    | `BankTransferPage`      | VietQR + số tài khoản + nội dung CK, poll 5s tới khi webhook/nhân viên xác nhận. |
 | `/payment/vnpay-return`                 | Server Component        | `vnp_ReturnUrl`: xác thực chữ ký, chốt trạng thái idempotent rồi chuyển về trang đơn. |
 | `/payment/zalopay-return`               | Server Component        | `embed_data.redirecturl`: xác thực `checksum` (Key2), chốt trạng thái idempotent rồi chuyển về trang đơn. |
 | `/admin/orders`                         | `AdminOrderListPage`    | F11: lọc + phân trang server-side qua API-M05-06.                |
-| `/admin/orders/[id]`                    | `AdminOrderDetailPage`  | F11: chi tiết, lịch sử trạng thái, chuyển trạng thái theo `ORDER_TRANSITIONS`. |
+| `/admin/orders/[id]`                    | `AdminOrderDetailPage`  | F11: chi tiết, lịch sử trạng thái, chuyển trạng thái, xác nhận đã nhận chuyển khoản (API-M05-10). |
 
 ## 9. Cấu trúc thư mục
 
@@ -114,14 +119,14 @@ m05-checkout/
 │   ├── constants.js        # ngưỡng COD, timeout 20 phút, số coupon/đơn
 │   ├── handlers.js         # map API-M05-xx -> service
 │   ├── repository.js       # truy vấn Supabase (orders, order_items, payment_transactions…)
-│   ├── service.js          # F01–F11 + IPN VNPAY + callback ZaloPay + sandbox
+│   ├── service.js          # F01–F11 + IPN VNPAY + callback ZaloPay + webhook chuyển khoản + sandbox
 │   ├── validation.js       # Zod schema theo API
 │   └── __tests__/module.test.js
 └── client/
     ├── components/         # 7 component ở mục 8
     ├── constants/          # vn-provinces.js — 63 tỉnh/thành kèm mã GSO
     ├── hooks/              # 1 hook TanStack Query cho mỗi API
-    ├── pages/              # 4 page component
+    ├── pages/              # 6 page component
     ├── services/           # checkout.api.js — 1 hàm cho mỗi API
     └── utils/              # datetime.js — định dạng ngày/đếm ngược
 ```
@@ -154,3 +159,12 @@ m05-checkout/
 - **Luồng kiểm thử tay:** thêm sản phẩm vào giỏ (M08 đã có tồn) → `/cart` → “Thanh toán” → điền địa chỉ → chọn cổng → thanh toán trên trang cổng → callback/redirect chốt đơn `PENDING` + `payment_status=SUCCESS` → kiểm tra `/account/orders` và `/admin/orders`.
 - **Tự động:** `npx vitest run src/modules/m05-checkout src/server/integrations/payment` chạy bộ test hợp đồng + Zod + HMAC/IPN + chữ ký ZaloPay + `recordPaymentResult` (không cần DB).
 - `getOrderDetail` trả thêm `payment_info.payment_mode` để UI chỉ hiện lối vào trang mô phỏng khi đang ở sandbox.
+
+## 13. Chuyển khoản ngân hàng (VietQR)
+
+- **Cấu hình:** đặt `BANK_TRANSFER_BANK_BIN` (mã BIN, ví dụ Vietcombank `970436`), `BANK_TRANSFER_ACCOUNT_NO`, `BANK_TRANSFER_ACCOUNT_NAME` (tùy chọn `BANK_TRANSFER_BANK_NAME` để hiển thị tên ngân hàng, `BANK_TRANSFER_TIMEOUT_MINUTES` mặc định 60, `BANK_TRANSFER_WEBHOOK_SECRET`). Thiếu 3 khóa đầu thì phương thức tự ẩn như các cổng khác.
+- **Luồng:** khách chọn “Chuyển khoản ngân hàng (VietQR)” → đơn `PENDING_PAYMENT` (giữ tồn 60 phút) → API-M05-02 trả `payment_url = /checkout/bank-transfer/<order_code>` → trang hiển thị ảnh VietQR động (`img.vietqr.io` với `amount` + `addInfo`) kèm số tài khoản, tên chủ tài khoản và nội dung chuyển khoản = mã đơn.
+- **Xác nhận tự động (API-M05-11):** webhook SePay/Casso gửi JSON `{ transferType, transferAmount, content, referenceCode }` kèm header `Authorization: Apikey <BANK_TRANSFER_WEBHOOK_SECRET>` (Casso dùng header `secure-token`); hệ thống tìm mã đơn trong `content` (chịu được khoảng trắng/dấu ngân hàng chèn), so số tiền với đơn rồi gọi `recordPaymentResult` idempotent. Không cấu hình secret thì endpoint trả 503 (không mở công khai).
+- **Xác nhận tay (API-M05-10):** trang `/admin/orders/[id]` có ô mã giao dịch ngân hàng + nút “Xác nhận đã nhận tiền” cho đơn `BANK_TRANSFER` chưa thanh toán; đơn đã hủy bị chặn để tránh cộng tiền sai.
+- **Bảo vệ:** đơn đã `SUCCESS` không bị xác nhận lặp; mã đơn không khớp/số tiền lệch/tiền ra đều trả `{ success: false }` để người vận hành đối soát.
+- **Tự động:** `npx vitest run src/modules/m05-checkout/server/__tests__/bank-transfer.test.js src/server/integrations/payment/__tests__/vietqr.test.js`.

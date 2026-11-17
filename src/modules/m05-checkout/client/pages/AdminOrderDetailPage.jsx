@@ -17,16 +17,18 @@ import EmptyState from '@/shared/ui/empty-state.jsx';
 import Select from '@/shared/ui/select.jsx';
 import Skeleton from '@/shared/ui/skeleton.jsx';
 import {
+  ORDER_STATUS,
   ORDER_STATUS_LABELS,
   ORDER_TRANSITIONS,
 } from '@/shared/constants/order-status.js';
-import { PAYMENT_STATUS_LABELS } from '@/shared/constants/payment.js';
+import { PAYMENT_METHODS, PAYMENT_STATUS, PAYMENT_STATUS_LABELS } from '@/shared/constants/payment.js';
 import { ERROR_CODES } from '@/shared/constants/error-codes.js';
 import { FulfillmentActions } from '@/modules/m06-fulfillment/public.client.js';
 import OrderTrackingTimeline from '../components/OrderTrackingTimeline.jsx';
 import { formatDateTime } from '../utils/datetime.js';
 import { useGetOrderDetail } from '../hooks/use-get-order-detail.js';
 import { useUpdateOrderStatus } from '../hooks/use-update-order-status.js';
+import { useConfirmBankTransfer } from '../hooks/use-confirm-bank-transfer.js';
 
 const STATUS_TONES = {
   PENDING_PAYMENT: 'warning',
@@ -59,14 +61,22 @@ export default function AdminOrderDetailPage() {
 
   const [nextStatus, setNextStatus] = useState('');
   const [note, setNote] = useState('');
+  const [bankRef, setBankRef] = useState('');
 
   const detailQuery = useGetOrderDetail({ orderRef }, { enabled: Boolean(orderRef) });
   const updateMutation = useUpdateOrderStatus();
+  const confirmBankMutation = useConfirmBankTransfer();
 
   const detail = detailQuery.data ?? null;
   const order = detail?.order ?? null;
   const items = detail?.order_items ?? [];
   const paymentInfo = detail?.payment_info ?? null;
+
+  const canConfirmBankTransfer =
+    order?.payment_method === PAYMENT_METHODS.BANK_TRANSFER &&
+    order?.payment_status !== PAYMENT_STATUS.SUCCESS &&
+    order?.status !== ORDER_STATUS.CANCELLED &&
+    order?.status !== ORDER_STATUS.CANCELLED_TIMEOUT;
 
   const transitionOptions = useMemo(
     () =>
@@ -76,6 +86,23 @@ export default function AdminOrderDetailPage() {
       })),
     [order?.status],
   );
+
+  async function confirmBankTransfer() {
+    if (!canConfirmBankTransfer) return;
+
+    try {
+      await confirmBankMutation.mutateAsync({
+        id: order.order_id,
+        body: bankRef.trim() ? { reference_code: bankRef.trim() } : {},
+      });
+      toast.success('Đã ghi nhận thanh toán chuyển khoản.');
+      setBankRef('');
+      await detailQuery.refetch();
+    } catch (error) {
+      toast.error(error?.message ?? 'Không thể xác nhận thanh toán chuyển khoản.');
+      await detailQuery.refetch();
+    }
+  }
 
   async function submitTransition() {
     if (!nextStatus) {
@@ -333,7 +360,54 @@ export default function AdminOrderDetailPage() {
                   <dd className="text-ink">{order.carrier_code}</dd>
                 </div>
               ) : null}
+              {paymentInfo?.bank_transfer ? (
+                <>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-slate">Nội dung CK</dt>
+                    <dd className="font-semibold text-ink">{paymentInfo.bank_transfer.memo}</dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-slate">Tài khoản nhận</dt>
+                    <dd className="text-right text-ink">
+                      {paymentInfo.bank_transfer.bank_name} · {paymentInfo.bank_transfer.account_no}
+                    </dd>
+                  </div>
+                </>
+              ) : null}
             </dl>
+
+            {order.payment_method === PAYMENT_METHODS.BANK_TRANSFER &&
+            order.payment_status !== PAYMENT_STATUS.SUCCESS ? (
+              <div className="mt-4 space-y-2 border-t border-fog pt-3">
+                <p className="text-caption text-slate">
+                  Chỉ xác nhận sau khi đối chiếu sao kê/ủy nhiệm chi. Thao tác ghi nhận một lần,
+                  không tạo giao dịch trùng.
+                </p>
+                <input
+                  type="text"
+                  value={bankRef}
+                  onChange={(event) => setBankRef(event.target.value)}
+                  maxLength={100}
+                  disabled={!canConfirmBankTransfer || confirmBankMutation.isPending}
+                  placeholder="Mã giao dịch ngân hàng (không bắt buộc)"
+                  className="block w-full rounded-sm border border-fog bg-white px-3.5 py-2.5 text-body-s text-ink placeholder:text-mist transition-colors duration-250 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:bg-fog/40"
+                />
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={confirmBankTransfer}
+                  loading={confirmBankMutation.isPending}
+                  disabled={!canConfirmBankTransfer}
+                >
+                  Xác nhận đã nhận tiền
+                </Button>
+                {!canConfirmBankTransfer ? (
+                  <p className="text-caption text-sale">
+                    Đơn đã hủy — nếu khách đã chuyển tiền, hãy hoàn tiền thủ công.
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
           </section>
 
           <FulfillmentActions

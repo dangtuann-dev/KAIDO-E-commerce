@@ -4,6 +4,7 @@
  */
 export const PAYMENT_METHODS = Object.freeze({
   COD: 'COD',
+  BANK_TRANSFER: 'BANK_TRANSFER',
   VNPAY: 'VNPAY',
   MOMO: 'MOMO',
   ZALOPAY: 'ZALOPAY',
@@ -13,12 +14,16 @@ export const PAYMENT_METHOD_VALUES = Object.freeze(Object.values(PAYMENT_METHODS
 
 export const PAYMENT_METHOD_LABELS = Object.freeze({
   COD: 'Thanh toán khi nhận hàng (COD)',
+  BANK_TRANSFER: 'Chuyển khoản ngân hàng (VietQR)',
   VNPAY: 'VNPAY',
   MOMO: 'MoMo',
   ZALOPAY: 'ZaloPay',
 });
 
+// Phương thức cần giữ tồn + hạn thanh toán trước khi nhân viên đóng đơn.
+// BANK_TRANSFER đi cùng nhóm này vì đơn chỉ được xử lý sau khi tiền vào tài khoản.
 export const ONLINE_PAYMENT_METHODS = Object.freeze([
+  PAYMENT_METHODS.BANK_TRANSFER,
   PAYMENT_METHODS.VNPAY,
   PAYMENT_METHODS.MOMO,
   PAYMENT_METHODS.ZALOPAY,

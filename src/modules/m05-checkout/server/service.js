@@ -39,6 +39,16 @@ import {
   isZalopaySandbox,
   verifyCallback as verifyZalopayCallback,
 } from '@/server/integrations/payment/zalopay.js';
+import {
+  buildTransferMemo,
+  buildVietQrUrl,
+  extractBankTransferEvent,
+  getBankTransferSettings,
+  getBankTransferTimeoutMinutes,
+  isBankTransferConfigured,
+  parseOrderRefFromContent,
+  verifyWebhookSecret,
+} from '@/server/integrations/payment/vietqr.js';
 import { clearCartAfterOrder, getCartSummaryForCheckout } from '@/modules/m04-cart/public.server.js';
 import {
   checkAvailability,
@@ -66,6 +76,12 @@ const PAYMENT_METHOD_OPTIONS = Object.freeze([
     label: 'Thanh toán khi nhận hàng (COD)',
     description: 'Kiểm tra hàng rồi mới trả tiền. Đơn trên 3.000.000đ cần nhân viên xác nhận.',
     requires_online_payment: false,
+  },
+  {
+    method: PAYMENT_METHODS.BANK_TRANSFER,
+    label: 'Chuyển khoản ngân hàng (VietQR)',
+    description: 'Quét VietQR bằng app ngân hàng, nội dung chuyển khoản là mã đơn.',
+    requires_online_payment: true,
   },
   {
     method: PAYMENT_METHODS.VNPAY,
@@ -365,6 +381,17 @@ function resolveMethodAvailability() {
       return { ...option, available: true, mode: 'cod', sandbox: false };
     }
 
+    if (option.method === PAYMENT_METHODS.BANK_TRANSFER) {
+      const configured = isBankTransferConfigured();
+      return {
+        ...option,
+        available: configured,
+        mode: 'bank',
+        sandbox: false,
+        note: configured ? null : 'Chưa cấu hình tài khoản nhận chuyển khoản.',
+      };
+    }
+
     if (option.method === PAYMENT_METHODS.VNPAY) {
       return {
         ...option,
@@ -407,7 +434,8 @@ export async function selectPaymentMethod(method) {
   }
   if (!option.available) {
     throw serviceUnavailable(
-      `${option.label} đang được hoàn thiện. Vui lòng chọn thanh toán khi nhận hàng (COD).`,
+      option.note ??
+        `${option.label} đang được hoàn thiện. Vui lòng chọn thanh toán khi nhận hàng (COD).`,
       { reason: `${option.method}_PENDING`, provider: option.method, feature: 'M05-F04' },
     );
   }
@@ -688,6 +716,7 @@ export async function getCheckoutSummary({ auth, body = {} }) {
     total_amount: total,
     cod_confirmation_threshold: COD_CONFIRMATION_THRESHOLD_VND,
     payment_timeout_minutes: PAYMENT_TIMEOUT_MINUTES,
+    bank_transfer_timeout_minutes: getBankTransferTimeoutMinutes(),
     payment_methods: resolveMethodAvailability(),
     warnings: discounts.warnings,
   };
@@ -764,10 +793,16 @@ async function assertStockAvailable(lines) {
 
 function decideInitialStatus({ paymentMethod, totalAmount }) {
   if (isOnlinePayment(paymentMethod)) {
+    // Chuyển khoản cần thời gian tiền về nên giữ tồn lâu hơn cổng ví/ATM.
+    const timeoutMinutes =
+      paymentMethod === PAYMENT_METHODS.BANK_TRANSFER
+        ? getBankTransferTimeoutMinutes()
+        : PAYMENT_TIMEOUT_MINUTES;
+
     return {
       status: ORDER_STATUS.PENDING_PAYMENT,
       paymentStatus: PAYMENT_STATUS.PENDING,
-      paymentExpiresAt: new Date(Date.now() + PAYMENT_TIMEOUT_MINUTES * 60 * 1000).toISOString(),
+      paymentExpiresAt: new Date(Date.now() + timeoutMinutes * 60 * 1000).toISOString(),
       requiresApproval: false,
     };
   }
@@ -818,6 +853,17 @@ function paymentRedirectPath(order) {
 
 async function initiateOnlinePaymentFor(order, { ipAddress } = {}) {
   const availability = await selectPaymentMethod(order.payment_method);
+
+  if (order.payment_method === PAYMENT_METHODS.BANK_TRANSFER) {
+    // Không gọi cổng: chỉ chuyển khách sang trang hướng dẫn quét VietQR.
+    getBankTransferSettings();
+    return {
+      paymentUrl: `/checkout/bank-transfer/${encodeURIComponent(order.order_code)}`,
+      mode: 'bank',
+      sandbox: false,
+      availability,
+    };
+  }
 
   if (order.payment_method === PAYMENT_METHODS.ZALOPAY) {
     const zalopay = await createZalopayOrder({
@@ -1150,7 +1196,10 @@ export async function placeOrder({ auth, body, request }) {
     points_discount_amount: discounts.pointsDiscountAmount,
     total_amount: totalAmount,
     redirect_path: paymentRedirectPath(order),
-    payment_timeout_minutes: PAYMENT_TIMEOUT_MINUTES,
+    payment_timeout_minutes:
+      paymentMethod === PAYMENT_METHODS.BANK_TRANSFER
+        ? getBankTransferTimeoutMinutes()
+        : PAYMENT_TIMEOUT_MINUTES,
     warnings: discounts.warnings,
   };
 }
@@ -1179,7 +1228,11 @@ export async function initiateOnlinePayment({ auth, params }) {
     throw conflict('Đơn hàng không còn ở trạng thái chờ thanh toán.', { status: order.status });
   }
   if (order.payment_expires_at && new Date(order.payment_expires_at).getTime() < Date.now()) {
-    throw conflict('Đã quá 20 phút thanh toán, đơn hàng sẽ được hủy tự động.', {
+    const timeoutMinutes =
+      order.payment_method === PAYMENT_METHODS.BANK_TRANSFER
+        ? getBankTransferTimeoutMinutes()
+        : PAYMENT_TIMEOUT_MINUTES;
+    throw conflict(`Đã quá ${timeoutMinutes} phút thanh toán, đơn hàng sẽ được hủy tự động.`, {
       payment_expires_at: order.payment_expires_at,
     });
   }
@@ -1349,6 +1402,164 @@ export async function handleZalopayCallback(ctx = {}) {
   return zalopayResponse(1, 'success');
 }
 
+const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8' };
+
+function bankWebhookResponse(payload, status = 200) {
+  return new Response(JSON.stringify(payload), { status, headers: JSON_HEADERS });
+}
+
+/**
+ * M05-F07 — Webhook chuyển khoản ngân hàng (SePay/Casso) idempotent (API-M05-11).
+ * Chỉ ghi nhận tiền vào khớp mã đơn + đúng số tiền; giao dịch lặp lại không tạo thêm bản ghi.
+ */
+export async function handleBankWebhook(ctx = {}) {
+  let settings;
+  try {
+    settings = getBankTransferSettings();
+  } catch (error) {
+    if (error?.code === ERROR_CODES.SERVICE_UNAVAILABLE) {
+      return bankWebhookResponse(
+        { success: false, message: 'Chưa cấu hình tài khoản nhận chuyển khoản.' },
+        503,
+      );
+    }
+    throw error;
+  }
+
+  if (!settings.webhookSecret) {
+    return bankWebhookResponse(
+      { success: false, message: 'Chưa cấu hình BANK_TRANSFER_WEBHOOK_SECRET.' },
+      503,
+    );
+  }
+
+  const authorization =
+    ctx.request?.headers?.get?.('authorization') ??
+    // Casso gửi khóa trong header secure-token thay vì Authorization.
+    ctx.request?.headers?.get?.('secure-token') ??
+    null;
+  if (!verifyWebhookSecret(authorization, settings.webhookSecret)) {
+    return bankWebhookResponse({ success: false, message: 'Sai khóa xác thực webhook.' }, 401);
+  }
+
+  const event = extractBankTransferEvent(ctx.body);
+  if (event.transferType && event.transferType !== 'in') {
+    return bankWebhookResponse({ success: true, message: 'Bỏ qua giao dịch tiền ra.' });
+  }
+
+  const orderRef = parseOrderRefFromContent(event.content);
+  if (!orderRef) {
+    return bankWebhookResponse({
+      success: false,
+      message: 'Không tìm thấy mã đơn trong nội dung chuyển khoản.',
+    });
+  }
+
+  const order = await repo.findOrderByRef(orderRef);
+  if (!order) {
+    return bankWebhookResponse({ success: false, message: `Không tìm thấy đơn ${orderRef}.` });
+  }
+
+  if (order.payment_method !== PAYMENT_METHODS.BANK_TRANSFER) {
+    return bankWebhookResponse({
+      success: false,
+      message: `Đơn ${orderRef} không dùng phương thức chuyển khoản.`,
+    });
+  }
+
+  if (
+    [ORDER_STATUS.CANCELLED, ORDER_STATUS.CANCELLED_TIMEOUT, ORDER_STATUS.RETURNED].includes(
+      order.status,
+    )
+  ) {
+    return bankWebhookResponse({
+      success: false,
+      message: `Đơn ${orderRef} đã hủy — cần hoàn tiền hoặc tạo lại đơn.`,
+    });
+  }
+
+  const expectedAmount = amountOf(order.total_amount);
+  if (event.amountVnd !== expectedAmount) {
+    return bankWebhookResponse({
+      success: false,
+      message: 'Số tiền chuyển khoản không khớp đơn hàng.',
+      order_code: order.order_code,
+      expected_amount: expectedAmount,
+      received_amount: event.amountVnd,
+    });
+  }
+
+  const result = await recordPaymentResult({
+    orderRef: order.order_code,
+    provider: PAYMENT_METHODS.BANK_TRANSFER,
+    providerTransactionId: event.referenceCode,
+    amountVnd: expectedAmount,
+    status: PAYMENT_STATUS.SUCCESS,
+    payload: event.raw,
+    note: 'Webhook ngân hàng xác nhận chuyển khoản.',
+  });
+
+  return bankWebhookResponse({
+    success: true,
+    message: 'Đã ghi nhận thanh toán.',
+    order_code: order.order_code,
+    payment_status: result.payment_status,
+  });
+}
+
+/**
+ * M05-F07/F11 — Nhân viên xác nhận đã nhận tiền chuyển khoản (API-M05-10).
+ * Dùng khi chưa nối webhook hoặc webhook không khớp (sai nội dung/số tiền).
+ */
+export async function confirmBankTransferPayment({ auth, params, body }) {
+  const order = await repo.findOrderById(params.id);
+  if (!order) throw notFound('Không tìm thấy đơn hàng.');
+
+  if (order.payment_method !== PAYMENT_METHODS.BANK_TRANSFER) {
+    throw conflict('Đơn hàng không dùng phương thức chuyển khoản ngân hàng.', {
+      payment_method: order.payment_method,
+    });
+  }
+
+  if (order.payment_status === PAYMENT_STATUS.SUCCESS) {
+    throw conflict('Đơn hàng đã được thanh toán.', { order_code: order.order_code });
+  }
+
+  if ([ORDER_STATUS.CANCELLED, ORDER_STATUS.CANCELLED_TIMEOUT].includes(order.status)) {
+    throw conflict('Đơn đã hủy — kiểm tra và hoàn tiền thủ công nếu khách đã chuyển khoản.', {
+      status: order.status,
+    });
+  }
+
+  const note = typeof body?.note === 'string' ? body.note.trim() : '';
+  const referenceCode = typeof body?.reference_code === 'string' ? body.reference_code.trim() : '';
+
+  const result = await recordPaymentResult({
+    orderRef: order.order_code,
+    provider: PAYMENT_METHODS.BANK_TRANSFER,
+    providerTransactionId: referenceCode || null,
+    amountVnd: amountOf(order.total_amount),
+    status: PAYMENT_STATUS.SUCCESS,
+    payload: {
+      source: 'admin',
+      confirmed_by: auth?.userId ?? null,
+      confirmed_by_role: auth?.role ?? null,
+      reference_code: referenceCode || null,
+      note: note || null,
+    },
+    note: note || `Nhân viên xác nhận đã nhận chuyển khoản (${order.order_code}).`,
+  });
+
+  const updated = await repo.findOrderById(order.id);
+  return {
+    order_id: order.id,
+    order_code: order.order_code,
+    order_status: updated?.status ?? result.order_status,
+    payment_status: result.payment_status,
+    updated: result.updated,
+  };
+}
+
 /* ------------------------------------------------------------------ */
 /* M05-F08 — Dữ liệu trang đặt hàng thành công                        */
 /* ------------------------------------------------------------------ */
@@ -1367,7 +1578,11 @@ export async function getOrderSuccess({ auth, params }) {
         ? ['Đơn đã thanh toán, KAIDO sẽ đóng gói và giao trong 2–4 ngày làm việc.']
         : order.status === ORDER_STATUS.PENDING_PAYMENT
           ? [
-              `Vui lòng hoàn tất thanh toán trong ${PAYMENT_TIMEOUT_MINUTES} phút để giữ tồn kho.`,
+              `Vui lòng hoàn tất thanh toán trong ${
+                order.payment_method === PAYMENT_METHODS.BANK_TRANSFER
+                  ? getBankTransferTimeoutMinutes()
+                  : PAYMENT_TIMEOUT_MINUTES
+              } phút để giữ tồn kho.`,
               'Quá hạn, đơn sẽ tự động hủy và tồn kho được trả lại.',
             ]
           : order.status === ORDER_STATUS.PENDING_APPROVAL
@@ -1383,15 +1598,42 @@ export async function getOrderSuccess({ auth, params }) {
 /**
  * Chế độ cổng thanh toán: UI chỉ mở trang mô phỏng khi đang là 'sandbox'.
  * @param {string} paymentMethod
- * @returns {'cod' | 'live' | 'sandbox' | 'unavailable'}
+ * @returns {'cod' | 'bank' | 'live' | 'sandbox' | 'unavailable'}
  */
 function resolvePaymentMode(paymentMethod) {
   if (!isOnlinePayment(paymentMethod)) return 'cod';
+  if (paymentMethod === PAYMENT_METHODS.BANK_TRANSFER) return 'bank';
   if (paymentMethod === PAYMENT_METHODS.ZALOPAY) return 'live';
   try {
     return getVnpaySettings().mode;
   } catch {
     return 'unavailable';
+  }
+}
+
+/**
+ * Thông tin chuyển khoản hiển thị cho khách: số tài khoản, nội dung, ảnh VietQR động.
+ * Trả null khi đơn không dùng chuyển khoản hoặc chưa cấu hình tài khoản nhận tiền.
+ */
+function buildBankTransferInfo(order) {
+  if (order.payment_method !== PAYMENT_METHODS.BANK_TRANSFER) return null;
+
+  try {
+    const settings = getBankTransferSettings();
+    const amount = amountOf(order.total_amount);
+    const memo = buildTransferMemo(order.order_code);
+    return {
+      bank_bin: settings.bankBin,
+      bank_name: settings.bankName,
+      account_no: settings.accountNo,
+      account_name: settings.accountName,
+      amount,
+      memo,
+      qr_url: buildVietQrUrl({ amountVnd: amount, memo }),
+      timeout_minutes: settings.timeoutMinutes,
+    };
+  } catch {
+    return null;
   }
 }
 
@@ -1429,6 +1671,7 @@ export async function getOrderDetail({ auth, params }) {
       payment_mode: resolvePaymentMode(order.payment_method),
       paid_at: payments.find((row) => row.status === PAYMENT_STATUS.SUCCESS)?.paid_at ?? null,
       expires_at: order.payment_expires_at,
+      bank_transfer: buildBankTransferInfo(order),
       transactions: payments.map((row) => ({
         transaction_id: row.id,
         provider: row.provider,

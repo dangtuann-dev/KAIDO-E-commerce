@@ -69,7 +69,7 @@ BEGIN
         'DELIVERY_FAILED', 'RETURNING', 'RETURNED'
       ]),
       ('payment_status', ARRAY['PENDING', 'SUCCESS', 'FAILED', 'REFUNDED', 'CANCELLED']),
-      ('payment_method', ARRAY['COD', 'VNPAY', 'MOMO', 'ZALOPAY']),
+      ('payment_method', ARRAY['COD', 'BANK_TRANSFER', 'VNPAY', 'MOMO', 'ZALOPAY']),
       ('shipping_method', ARRAY['STANDARD', 'EXPRESS']),
       ('carrier_code', ARRAY['GHN', 'GHTK', 'VIETTELPOST']),
       ('shipment_status', ARRAY[

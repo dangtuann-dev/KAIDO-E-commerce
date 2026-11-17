@@ -36,7 +36,8 @@ const STATUS_TONES = {
  *   nextSteps?: string[],
  *   cancelling?: boolean,
  *   onCancel?: () => void,
- *   sandboxHref?: string | null,
+ *   paymentHref?: string | null,
+ *   paymentLabel?: string,
  * }} props
  */
 export default function OrderSuccessCard({
@@ -45,7 +46,8 @@ export default function OrderSuccessCard({
   nextSteps = [],
   cancelling = false,
   onCancel,
-  sandboxHref = null,
+  paymentHref = null,
+  paymentLabel = 'Thanh toán ngay (mô phỏng)',
 }) {
   const expiresAt = order?.payment_expires_at ?? paymentInfo?.expires_at ?? null;
   const isWaitingPayment = order?.status === 'PENDING_PAYMENT';
@@ -181,12 +183,12 @@ export default function OrderSuccessCard({
         >
           Tiếp tục mua sắm
         </Link>
-        {sandboxHref && !order?.is_paid ? (
+        {paymentHref && !order?.is_paid ? (
           <Link
-            href={sandboxHref}
+            href={paymentHref}
             className="inline-flex min-h-[44px] items-center justify-center rounded-sm bg-accent px-5 text-body-s font-semibold text-ink transition-colors duration-250 hover:bg-accent-hover"
           >
-            Thanh toán ngay (mô phỏng)
+            {paymentLabel}
           </Link>
         ) : null}
         {order?.can_cancel && onCancel ? (

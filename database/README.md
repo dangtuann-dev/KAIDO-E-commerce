@@ -102,6 +102,7 @@ Giới hạn nghiệp vụ (10 ảnh/sản phẩm, 5 ảnh hoặc 1 video/review
   - Mỗi file chạy được một lần, có comment mã SRS liên quan.
   - Chạy theo thứ tự trên staging trước, sau đó production.
 - Với M01-F04, chạy `migrations/001_m01_manage_user_address.sql` trên project Supabase hiện có để bật lưu địa chỉ và các thao tác mặc định nguyên tử.
+- Với M05, chạy `migrations/003_m05_bank_transfer_payment_method.sql` để thêm `BANK_TRANSFER` vào enum `payment_method` (đơn và giao dịch chuyển khoản) trên project đã có dữ liệu.
 - Có thể chuyển sang Supabase CLI (`supabase db push`) khi đội thống nhất; hiện tại dùng SQL Editor để đơn giản.
 
 ## 7. Reset môi trường dev

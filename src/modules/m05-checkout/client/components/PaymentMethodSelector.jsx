@@ -4,7 +4,7 @@
  * [TOY-M05] Đặt hàng và thanh toán — PaymentMethodSelector
  * SRS: M05-F04, M05-F07 | API: API-M05-01, API-M05-02 | BR: BR-M05-02, BR-M05-03
  * Route: /checkout
- * UI: Chỉ COD, VNPAY, MoMo, ZaloPay; tuyệt đối không có form thẻ tín dụng (SYS-NFR-04).
+ * UI: COD, chuyển khoản VietQR, VNPAY, MoMo, ZaloPay; tuyệt đối không có form thẻ tín dụng (SYS-NFR-04).
  * Danh sách phương thức + trạng thái khả dụng do API-M05-01 trả về.
  */
 import { formatVND } from '@/shared/utils/formatVND.js';
@@ -27,6 +27,7 @@ import { cn } from '@/shared/utils/cn.js';
  *   onChange?: (method: string) => void,
  *   total?: number,
  *   codThreshold?: number,
+ *   timeoutMinutes?: number,
  *   disabled?: boolean,
  * }} props
  */
@@ -36,6 +37,7 @@ export default function PaymentMethodSelector({
   onChange,
   total = 0,
   codThreshold = 0,
+  timeoutMinutes = 20,
   disabled = false,
 }) {
   const codNeedsApproval = codThreshold > 0 && total > codThreshold;
@@ -106,7 +108,9 @@ export default function PaymentMethodSelector({
       <p className="rounded-sm bg-surface-sky px-3 py-2 text-caption text-primary">
         {value === 'COD'
           ? 'Bạn thanh toán bằng tiền mặt cho nhân viên giao hàng khi nhận sản phẩm.'
-          : 'Sau khi bấm “Đặt hàng”, bạn sẽ được chuyển sang cổng thanh toán. Đơn được giữ tồn trong 20 phút.'}
+          : value === 'BANK_TRANSFER'
+            ? `Sau khi bấm “Đặt hàng”, bạn sẽ được chuyển tới trang quét VietQR và trang tự cập nhật khi tiền vào. Đơn được giữ tồn trong ${timeoutMinutes} phút.`
+            : `Sau khi bấm “Đặt hàng”, bạn sẽ được chuyển sang cổng thanh toán. Đơn được giữ tồn trong ${timeoutMinutes} phút.`}
       </p>
     </section>
   );

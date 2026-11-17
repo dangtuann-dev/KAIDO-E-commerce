@@ -120,4 +120,14 @@ export const validationSchemas = Object.freeze({
   },
   'API-M05-08': { query: customerOrderQuerySchema },
   'API-M05-09': {},
+  'API-M05-10': {
+    params: z.object({ id: uuidSchema }),
+    body: z
+      .object({
+        reference_code: z.string().trim().max(100).optional(),
+        note: z.string().trim().max(500).optional(),
+      })
+      .optional(),
+  },
+  'API-M05-11': {},
 });
