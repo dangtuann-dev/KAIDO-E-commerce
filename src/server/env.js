@@ -222,10 +222,14 @@ export function getPaymentGatewayStatus() {
 
 /**
  * Cho phép mô phỏng thanh toán khi chưa cấu hình cổng thật.
- * Chỉ bật ngoài môi trường production để không tạo lỗ hổng giả mạo IPN.
+ * Mặc định chỉ bật ngoài production để không tạo lỗ hổng giả mạo IPN;
+ * deployment demo có thể bật tường minh bằng PAYMENT_SANDBOX_DEMO=true (tắt sau khi demo).
  */
 export function isPaymentSandboxAllowed() {
-  return (process.env.NODE_ENV || 'development') !== 'production';
+  if ((process.env.NODE_ENV || 'development') !== 'production') {
+    return true;
+  }
+  return process.env.PAYMENT_SANDBOX_DEMO === 'true';
 }
 
 /**
