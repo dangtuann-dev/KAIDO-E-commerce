@@ -6,6 +6,7 @@
  * Khu sản phẩm nổi bật do M02 cung cấp qua public.client.js (M02-F10).
  */
 import Link from 'next/link';
+import Image from 'next/image';
 import Badge from '@/shared/ui/badge.jsx';
 import ArticleCard from '../components/ArticleCard.jsx';
 import FlashSaleCountdownBar from '../components/FlashSaleCountdownBar.jsx';
@@ -14,15 +15,23 @@ import { getActiveCampaigns, getBanners, listPublicArticles } from '../../server
 import { FeaturedProductShelf } from '@/modules/m02-catalog/public.client.js';
 
 const DEMO_CATEGORIES = [
-  { href: '/category/bo-lap-rap', label: 'Bộ lắp ráp', tone: 'bg-surface-sky' },
-  { href: '/category/do-choi-dieu-khien', label: 'Đồ chơi điều khiển', tone: 'bg-surface-mint' },
-  { href: '/category/do-choi-giao-duc', label: 'Đồ chơi giáo dục', tone: 'bg-surface-blush' },
+  { href: '/category/bo-lap-rap', label: 'Bộ lắp ráp', image: '/media/home/cat-lap-rap.png' },
+  {
+    href: '/category/do-choi-dieu-khien',
+    label: 'Đồ chơi điều khiển',
+    image: '/media/home/cat-dieu-khien.png',
+  },
+  {
+    href: '/category/do-choi-giao-duc',
+    label: 'Đồ chơi giáo dục',
+    image: '/media/home/cat-giao-duc.png',
+  },
   {
     href: '/category/do-choi-than-thien-moi-truong',
     label: 'Thân thiện môi trường',
-    tone: 'bg-accent/30',
+    image: '/media/home/cat-moi-truong.png',
   },
-  { href: '/category/thu-bong', label: 'Thú bông', tone: 'bg-fog/60' },
+  { href: '/category/thu-bong', label: 'Thú bông', image: '/media/home/cat-thu-bong.png' },
 ];
 
 const HIGHLIGHTS = [
@@ -72,14 +81,37 @@ export default async function HomePage() {
             Xem tất cả
           </Link>
         </div>
-        <ul className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-5">
+        <ul className="mt-5 flex flex-wrap justify-start gap-3 xl:justify-between">
           {DEMO_CATEGORIES.map((category) => (
-            <li key={category.href}>
+            <li key={category.href} className="w-[calc(50%-6px)] md:w-[200px]">
               <Link
                 href={category.href}
-                className={`flex min-h-[104px] items-end rounded-md border border-fog p-4 text-body-s font-semibold text-ink transition-colors duration-250 hover:border-primary ${category.tone}`}
+                className={`group relative block aspect-[4/3] w-full overflow-hidden rounded-md bg-ink ring-2 ring-white transition-colors duration-250 hover:ring-primary`}
               >
-                {category.label}
+                <Image
+                  src={category.image}
+                  alt=""
+                  fill
+                  sizes="(max-width: 768px) 50vw, 200px"
+                  className="object-cover"
+                />
+                <span className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-2 bg-gradient-to-t from-ink/70 via-ink/20 to-transparent px-3 pb-3 pt-6 lg:px-3.5 lg:pb-3.5">
+                  <span className="text-[18px] font-bold leading-[1.15] text-white [text-wrap:balance] lg:text-[24px]">
+                    {category.label}
+                  </span>
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2.5}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="mb-1 h-5 w-5 shrink-0 text-white/85"
+                  >
+                    <path d="m9 5 7 7-7 7" />
+                  </svg>
+                </span>
               </Link>
             </li>
           ))}

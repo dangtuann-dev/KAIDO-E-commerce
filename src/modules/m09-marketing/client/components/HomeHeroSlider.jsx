@@ -95,14 +95,17 @@ function BrandHero() {
           </div>
         </div>
 
-        <div aria-hidden="true" className="relative hidden md:block">
-          <div className="mx-auto grid aspect-square w-full max-w-sm place-items-center rounded-full bg-white/70">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="h-24 w-24 rotate-[-6deg] rounded-lg bg-primary shadow-card" />
-              <div className="mt-6 h-20 w-20 rotate-6 rounded-md bg-accent shadow-card" />
-              <div className="h-20 w-20 rotate-3 rounded-md bg-secondary shadow-card" />
-              <div className="-mt-4 h-24 w-24 rotate-[-4deg] rounded-lg bg-surface-sky shadow-card" />
-            </div>
+        <div aria-hidden="true" className="relative hidden md:flex md:items-center md:justify-center">
+          <div className="relative w-full overflow-hidden rounded-[2rem] bg-white/60 shadow-card ring-1 ring-white/80">
+            <Image
+              src="/media/home/banner.png"
+              alt=""
+              width={1672}
+              height={941}
+              priority
+              sizes="(max-width: 1024px) 46vw, 560px"
+              className="h-auto w-full object-cover"
+            />
           </div>
         </div>
       </div>
